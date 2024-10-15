@@ -43,7 +43,7 @@ function Hero() {
           <RevealOnScroll>
             <animated.div style={imageAnimation} className="md:w-75 mt-8 md:mt-0">
               <img
-                src="/assets/hero-image.jpeg"
+                src="/assets/hero-image-2.jpeg"
                 alt="Emo App Showcase"
                 className="w-full max-w-md mx-auto rounded-lg shadow-lg"
               />
