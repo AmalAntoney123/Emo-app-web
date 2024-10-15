@@ -1,4 +1,5 @@
 import React from 'react';
+import { Helmet } from 'react-helmet';
 import { animated } from 'react-spring';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -11,6 +12,9 @@ import Footer from './components/Footer';
 function App() {
   return (
     <div className="bg-background text-text min-h-screen">
+      <Helmet>
+        <title>Emo App</title>
+      </Helmet>
       <Header />
       <Hero />
       <About />
