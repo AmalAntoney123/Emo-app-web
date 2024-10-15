@@ -8,6 +8,7 @@ import Users from './Users';
 import Analytics from './Analytics';
 import SupportGroups from './SupportGroups';
 import SleepMusic from './SleepMusic';
+import Reports from './Reports';
 
 function AdminPanel() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -49,6 +50,7 @@ function AdminPanel() {
     { id: 'supportGroups', label: 'Support Groups', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
     { id: 'sleepMusic', label: 'Sleep Music', icon: 'M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3' },
     { id: 'analytics', label: 'Analytics', icon: 'M9 2a1 1 0 000 2h2a1 1 0 100-2H9z M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z' },
+    // { id: 'reports', label: 'Reports', icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
   ];
 
   const renderActiveTabContent = () => {
@@ -63,17 +65,30 @@ function AdminPanel() {
         return <SupportGroups />;
       case 'sleepMusic':
         return <SleepMusic />;
+      case 'reports':
+        return <Reports />;
       default:
         return <Dashboard />;
     }
   };
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsSidebarOpen(window.innerWidth >= 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Set initial state
+
+    return () => window.removeEventListener('resize', handleResize);
+  }, [user]);
 
   return (
     <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
       <div
         className={`bg-surface h-screen shadow-xl px-3 w-60 overflow-x-hidden transition-all duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          } md:translate-x-0`}
+          } md:translate-x-0 absolute md:relative z-30`}
       >
         <div className="space-y-6 md:space-y-10 mt-10">
           <h1 className="hidden md:block font-bold text-sm md:text-xl text-center">
@@ -93,27 +108,6 @@ function AdminPanel() {
               </h2>
               <p className="text-xs text-disabled text-center">{userData?.role || "Administrator"}</p>
             </div>
-          </div>
-          <div className="flex border-2 border-divider rounded-md focus-within:ring-2 ring-primary">
-            <input
-              type="text"
-              className="w-full rounded-tl-md rounded-bl-md px-2 py-3 text-sm text-text focus:outline-none bg-surface"
-              placeholder="Search"
-            />
-            <button className="rounded-tr-md rounded-br-md px-2 py-3 hidden md:block">
-              <svg
-                className="w-4 h-4 fill-current text-primary"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                  clipRule="evenodd"
-                ></path>
-              </svg>
-            </button>
           </div>
           <div id="menu" className="flex flex-col space-y-2">
             {tabs.map((tab) => (
@@ -140,16 +134,39 @@ function AdminPanel() {
         </div>
       </div>
 
+      {/* Collapsed Sidebar Button */}
+      <div className="md:hidden absolute top-4 left-4 z-40">
+        <button
+          className="p-2 bg-surface rounded-md shadow-md"
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+        >
+          <svg
+            className="w-6 h-6 text-primary"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 6h16M4 12h16M4 18h16"
+            />
+          </svg>
+        </button>
+      </div>
+
       {/* Main content */}
       <div className="flex-1 bg-background">
         <AdminHeader />
         <div className="p-4">
-          <button
-            className="md:hidden mb-4 p-2 bg-gray-200 rounded"
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          >
-            {isSidebarOpen ? 'Close Menu' : 'Open Menu'}
-          </button>
+          {isSidebarOpen && (
+            <div
+              className="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"
+              onClick={() => setIsSidebarOpen(false)}
+            ></div>
+          )}
           <div className="border-2 border-gray-200 border-dashed rounded-lg p-4">
             {renderActiveTabContent()}
           </div>
