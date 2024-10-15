@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useSpring, animated } from 'react-spring';
 import RevealOnScroll from './RevealOnScroll';
+import { FaQuestionCircle } from 'react-icons/fa';
+import InstallModal from './InstallModal';
 
 function Hero() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const imageAnimation = useSpring({
     from: { transform: 'translateY(0px)' },
     to: async (next) => {
@@ -27,21 +31,27 @@ function Hero() {
   return (
     <section className="py-20">
       <div className="container mx-auto px-4">
-        <div className="flex flex-col md:flex-row items-center">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
           <RevealOnScroll>
-            <div className="md:w-1/2 text-left md:pr-16">
+            <div className="text-left">
               <h2 className="text-5xl font-bold text-gray-800 mb-4">Welcome to Emo</h2>
               <p className="text-xl text-gray-600 mb-8">Your companion for mental health and wellbeing</p>
-              <button 
-                onClick={handleDownload}
-                className="inline-block bg-primary text-white font-bold py-3 px-8 rounded-full hover:bg-primaryLight transition duration-300 transform hover:scale-105"
-              >
-                Download Now
-              </button>
+              <div className="flex items-center">
+                <button 
+                  onClick={handleDownload}
+                  className="inline-block bg-primary text-white font-bold py-3 px-8 rounded-full hover:bg-primaryLight transition duration-300 transform hover:scale-105 mr-2"
+                >
+                  Download Now
+                </button>
+                <FaQuestionCircle 
+                  className="text-primary text-2xl cursor-pointer hover:text-primaryLight transition duration-300"
+                  onClick={() => setIsModalOpen(true)}
+                />
+              </div>
             </div>
           </RevealOnScroll>
           <RevealOnScroll>
-            <animated.div style={imageAnimation} className="md:w-75 mt-8 md:mt-0">
+            <animated.div style={imageAnimation} className="w-full">
               <img
                 src="/assets/hero-image-2.jpeg"
                 alt="Emo App Showcase"
@@ -51,6 +61,7 @@ function Hero() {
           </RevealOnScroll>
         </div>
       </div>
+      <InstallModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </section>
   );
 }
