@@ -1,6 +1,6 @@
 import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
-import { animated } from 'react-spring';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import About from './components/About';
@@ -8,21 +8,37 @@ import Features from './components/Features';
 import AppPreview from './components/AppPreview';
 import Testimonials from './components/Testimonials';
 import Footer from './components/Footer';
+import Login from './components/Login';
+import AdminPanel from './components/admin/AdminPanel';
 
-function App() {
+
+
+function MainContent() {
   return (
-    <div className="bg-background text-text min-h-screen">
-      <Helmet>
-        <title>Emo App</title>
-      </Helmet>
-      <Header />
+    <>
       <Hero />
       <About />
       <Features />
       <AppPreview />
       <Testimonials />
-      <Footer />
-    </div>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <div className="bg-background text-text min-h-screen">
+        <Helmet>
+          <title>Emo App</title>
+        </Helmet>
+        <Routes>
+          <Route path="/" element={<><Header /><MainContent /><Footer /></>} />
+          <Route path="/login" element={<><Header /><Login /><Footer /></>} />
+          <Route path="/admin" element={<AdminPanel />} />
+        </Routes>
+      </div>
+    </Router>
   );
 }
 

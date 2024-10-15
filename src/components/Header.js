@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 
 function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -20,9 +21,9 @@ function Header() {
   }, [isMenuOpen]);
 
   return (
-    <header className="py-4 bg-gray-800 shadow-md relative">
+    <header className="bg-white shadow-md">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between">
+        <div className="flex justify-between items-center py-4">
           <img
             src="/assets/logo.png"
             alt="Emo Logo"
@@ -40,14 +41,11 @@ function Header() {
           </button>
 
           {/* Desktop menu */}
-          <nav className="hidden md:block">
-            <ul className="flex space-x-4">
-              <li><a href="#about" className="text-gray-200 hover:text-primary">About</a></li>
-              <li><a href="#features" className="text-gray-200 hover:text-primary">Features</a></li>
-              <li><a href="#app-preview" className="text-gray-200 hover:text-primary">App Preview</a></li>
-              <li><a href="#testimonials" className="text-gray-200 hover:text-primary">Testimonials</a></li>
-              <li><a href="#download" className="text-gray-200 hover:text-primary">Download</a></li>
-            </ul>
+          <nav className="hidden md:flex space-x-4">
+            <a href="#about" className="text-gray-600 hover:text-primary">About</a>
+            <a href="#features" className="text-gray-600 hover:text-primary">Features</a>
+            <a href="#app-preview" className="text-gray-600 hover:text-primary">App Preview</a>
+            <a href="#testimonials" className="text-gray-600 hover:text-primary">Testimonials</a>
           </nav>
         </div>
 
@@ -59,7 +57,7 @@ function Header() {
               <li><a href="#features" className="text-2xl text-gray-200 hover:text-primary" onClick={toggleMenu}>Features</a></li>
               <li><a href="#app-preview" className="text-2xl text-gray-200 hover:text-primary" onClick={toggleMenu}>App Preview</a></li>
               <li><a href="#testimonials" className="text-2xl text-gray-200 hover:text-primary" onClick={toggleMenu}>Testimonials</a></li>
-              <li><a href="#download" className="text-2xl text-gray-200 hover:text-primary" onClick={toggleMenu}>Download</a></li>
+              <li><Link to="/admin" className="text-2xl text-gray-200 hover:text-primary" onClick={toggleMenu}>Admin</Link></li>
             </ul>
           </div>
         </nav>
