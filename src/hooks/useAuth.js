@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut, signInWithPopup } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut, signInWithPopup, sendPasswordResetEmail } from 'firebase/auth';
 import { ref, get } from 'firebase/database';
 import { GoogleAuthProvider } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
@@ -38,26 +38,52 @@ export const useAuth = () => {
     return () => unsubscribe();
   }, []);
 
+  const getErrorMessage = (error) => {
+    switch (error.code) {
+      case 'auth/invalid-credential':
+      case 'auth/wrong-password':
+        return 'Invalid email or password. Please try again.';
+      case 'auth/user-disabled':
+        return 'This account has been disabled. Please contact support.';
+      case 'auth/user-not-found':
+        return 'No account found with this email. Please check and try again.';
+      case 'auth/invalid-email':
+        return 'Please enter a valid email address.';
+      case 'auth/email-already-in-use':
+        return 'An account with this email already exists.';
+      case 'auth/operation-not-allowed':
+        return 'This operation is not allowed. Please contact support.';
+      case 'auth/weak-password':
+        return 'Please choose a stronger password.';
+      case 'auth/network-request-failed':
+        return 'Network error. Please check your internet connection and try again.';
+      case 'auth/too-many-requests':
+        return 'Too many unsuccessful attempts. Please try again later.';
+      default:
+        return 'An unexpected issue occurred. Please try again.';
+    }
+  };
+
   const login = async (email, password) => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       if (!userCredential.user.emailVerified) {
-        throw new Error('email-not-verified');
+        return { success: false, message: 'Please verify your email before logging in.' };
       }
       
       const userSnapshot = await get(ref(db, `users/${userCredential.user.uid}`));
       const userData = userSnapshot.val();
       if (userData?.isActive === false) {
-        throw new Error('user-disabled');
+        return { success: false, message: 'Your account has been disabled.' };
       }
       
       if (userData?.role !== 'admin') {
-        throw new Error('not-admin');
+        return { success: false, message: 'You do not have admin privileges.' };
       }
       
-      return userCredential.user;
+      return { success: true, user: userCredential.user };
     } catch (error) {
-      throw error;
+      return { success: false, message: getErrorMessage(error) };
     }
   };
 
@@ -70,16 +96,16 @@ export const useAuth = () => {
       const userData = userSnapshot.val();
       
       if (userData?.isActive === false) {
-        throw new Error('user-disabled');
+        return { success: false, message: 'Your account has been disabled.' };
       }
       
       if (userData?.role !== 'admin') {
-        throw new Error('not-admin');
+        return { success: false, message: 'You do not have admin privileges.' };
       }
       
-      return user;
+      return { success: true, user };
     } catch (error) {
-      throw error;
+      return { success: false, message: getErrorMessage(error) };
     }
   };
 
@@ -96,5 +122,24 @@ export const useAuth = () => {
     }
   };
 
-  return { user, isEmailVerified, isAdmin, isActive, login, loginWithGoogle, logout, redirectToLogin };
+  const resetPassword = async (email) => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+      return { success: true, message: 'Password reset email sent. Check your inbox.' };
+    } catch (error) {
+      return { success: false, message: getErrorMessage(error) };
+    }
+  };
+
+  return { 
+    user, 
+    isEmailVerified, 
+    isAdmin, 
+    isActive, 
+    login, 
+    loginWithGoogle, 
+    logout, 
+    redirectToLogin,
+    resetPassword
+  };
 };

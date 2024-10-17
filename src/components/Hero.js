@@ -19,9 +19,8 @@ function Hero() {
   });
 
   const handleDownload = () => {
-    const apkUrl = '/assets/emo-app.apk'; // Update this with the actual path to your APK file
     const link = document.createElement('a');
-    link.href = apkUrl;
+    link.href = '/assets/emo-app.apk';
     link.download = 'emo-app.apk';
     document.body.appendChild(link);
     link.click();
@@ -37,13 +36,13 @@ function Hero() {
               <h2 className="text-5xl font-bold text-gray-800 mb-4">Welcome to Emo</h2>
               <p className="text-xl text-gray-600 mb-8">Your companion for mental health and wellbeing</p>
               <div className="flex items-center">
-                <button 
+                <button
                   onClick={handleDownload}
                   className="inline-block bg-primary text-white font-bold py-3 px-8 rounded-full hover:bg-primaryLight transition duration-300 transform hover:scale-105 mr-2"
                 >
                   Download Now
                 </button>
-                <FaQuestionCircle 
+                <FaQuestionCircle
                   className="text-primary text-2xl cursor-pointer hover:text-primaryLight transition duration-300"
                   onClick={() => setIsModalOpen(true)}
                 />

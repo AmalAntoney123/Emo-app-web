@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { FcGoogle } from 'react-icons/fc'; // Add this import
+import { FcGoogle } from 'react-icons/fc';
+import ErrorMessage from './ErrorMessage'; // Import the new ErrorMessage component
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -10,8 +11,11 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const [adminMessage, setAdminMessage] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetMessage, setResetMessage] = useState('');
+  const [showResetForm, setShowResetForm] = useState(false);
   const navigate = useNavigate();
-  const { login, loginWithGoogle, user, isAdmin } = useAuth();
+  const { login, loginWithGoogle, user, isAdmin, resetPassword } = useAuth();
 
   useEffect(() => {
     if (user && isAdmin) {
@@ -30,40 +34,45 @@ function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-    try {
-      await login(email, password);
-      // Admin message will be set by the useEffect hook
-    } catch (error) {
-      if (error.message === 'not-admin') {
-        setError('You do not have admin privileges.');
-      } else {
-        setError(error.message);
-      }
-    } finally {
-      setLoading(false);
+    setError('');
+    const result = await login(email, password);
+    if (result.success) {
+      // Handle successful login
+    } else {
+      setError(result.message);
     }
+    setLoading(false);
   };
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
-    try {
-      await loginWithGoogle();
-      // Admin message will be set by the useEffect hook
-    } catch (error) {
-      if (error.message === 'not-admin') {
-        setError('You do not have admin privileges.');
-      } else if (error.message === 'user-disabled') {
-        setError('Your account has been disabled.');
-      } else {
-        setError('An error occurred during Google sign-in.');
-      }
-    } finally {
-      setLoading(false);
+    setError('');
+    const result = await loginWithGoogle();
+    if (result.success) {
+      // Handle successful login
+    } else {
+      setError(result.message);
     }
+    setLoading(false);
   };
 
   const handleAppleSignIn = async () => {
     // Implement Apple sign-in logic here
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setResetMessage('');
+    const result = await resetPassword(resetEmail);
+    if (result.success) {
+      setResetMessage(result.message);
+      setShowResetForm(false);
+    } else {
+      setError(result.message);
+    }
+    setLoading(false);
   };
 
   if (loading) {
@@ -87,69 +96,109 @@ function Login() {
             <h2 className="text-center text-3xl font-bold text-primary">Welcome back</h2>
             
           </div>
-          <form className="mt-8 space-y-6" onSubmit={handleLogin}>
-            <div className="rounded-md shadow-sm -space-y-px">
+          {showResetForm ? (
+            <form className="mt-8 space-y-6" onSubmit={handleResetPassword}>
               <div>
-                <label htmlFor="email-address" className="sr-only">Email address</label>
+                <label htmlFor="reset-email" className="sr-only">Email address</label>
                 <input
-                  id="email-address"
+                  id="reset-email"
                   name="email"
                   type="email"
                   autoComplete="email"
                   required
-                  className="appearance-none rounded-t-md relative block w-full px-3 py-2 border border-divider placeholder-disabled text-text focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm bg-surface"
+                  className="appearance-none rounded-md relative block w-full px-3 py-2 border border-divider placeholder-disabled text-text focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm bg-surface"
                   placeholder="Email address"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
                 />
               </div>
               <div>
-                <label htmlFor="password" className="sr-only">Password</label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  className="appearance-none rounded-b-md relative block w-full px-3 py-2 border border-divider placeholder-disabled text-text focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm bg-surface"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+                <button
+                  type="submit"
+                  className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primaryLight focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                >
+                  Reset Password
+                </button>
               </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  name="remember-me"
-                  type="checkbox"
-                  className="h-4 w-4 text-primary focus:ring-primary border-divider rounded"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-text">
-                  Remember me
-                </label>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setShowResetForm(false)}
+                  className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-primary bg-surface hover:bg-disabledLight focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                >
+                  Back to Login
+                </button>
+              </div>
+            </form>
+          ) : (
+            <form className="mt-8 space-y-6" onSubmit={handleLogin}>
+              <div className="rounded-md shadow-sm -space-y-px">
+                <div>
+                  <label htmlFor="email-address" className="sr-only">Email address</label>
+                  <input
+                    id="email-address"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    className="appearance-none rounded-t-md relative block w-full px-3 py-2 border border-divider placeholder-disabled text-text focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm bg-surface"
+                    placeholder="Email address"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="password" className="sr-only">Password</label>
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    autoComplete="current-password"
+                    required
+                    className="appearance-none rounded-b-md relative block w-full px-3 py-2 border border-divider placeholder-disabled text-text focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm bg-surface"
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
               </div>
 
-              <div className="text-sm">
-                <a href="#" className="font-medium text-accent hover:text-primary">
-                  Forgot password?
-                </a>
-              </div>
-            </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <input
+                    id="remember-me"
+                    name="remember-me"
+                    type="checkbox"
+                    className="h-4 w-4 text-primary focus:ring-primary border-divider rounded"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                  />
+                  <label htmlFor="remember-me" className="ml-2 block text-sm text-text">
+                    Remember me
+                  </label>
+                </div>
 
-            <div>
-              <button
-                type="submit"
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primaryLight focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-              >
-                Sign in to your account
-              </button>
-            </div>
-          </form>
+                <div className="text-sm">
+                  <button
+                    type="button"
+                    onClick={() => setShowResetForm(true)}
+                    className="font-medium text-accent hover:text-primary"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <button
+                  type="submit"
+                  className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primaryLight focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                >
+                  Sign in to your account
+                </button>
+              </div>
+            </form>
+          )}
 
           <div className="mt-6">
             <div className="relative">
@@ -171,6 +220,14 @@ function Login() {
               </button>
             </div>
           </div>
+
+          <ErrorMessage message={error} />
+
+          {resetMessage && (
+            <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mt-4" role="alert">
+              <span className="block sm:inline">{resetMessage}</span>
+            </div>
+          )}
         </div>
       </div>
     </div>
