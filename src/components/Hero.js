@@ -19,12 +19,7 @@ function Hero() {
   });
 
   const handleDownload = () => {
-    const link = document.createElement('a');
-    link.href = '/assets/emo-app.apk';
-    link.download = 'emo-app.apk';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    window.open('/assets/emo-app.apk', '_blank');
   };
 
   return (
@@ -36,12 +31,17 @@ function Hero() {
               <h2 className="text-5xl font-bold text-gray-800 mb-4">Welcome to Emo</h2>
               <p className="text-xl text-gray-600 mb-8">Your companion for mental health and wellbeing</p>
               <div className="flex items-center">
-                <button
-                  onClick={handleDownload}
+                <a
+                  href="/assets/emo-app.apk"
+                  download="emo-app.apk"
                   className="inline-block bg-primary text-white font-bold py-3 px-8 rounded-full hover:bg-primaryLight transition duration-300 transform hover:scale-105 mr-2"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleDownload();
+                  }}
                 >
                   Download Now
-                </button>
+                </a>
                 <FaQuestionCircle
                   className="text-primary text-2xl cursor-pointer hover:text-primaryLight transition duration-300"
                   onClick={() => setIsModalOpen(true)}
