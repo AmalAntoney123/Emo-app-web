@@ -1,0 +1,2 @@
+*.apk filter=lfs diff=lfs merge=lfs -text
+d:/Class[[:space:]]S9/Mini[[:space:]]project/App/React/emo-web/public/assets/emo-app.apk filter=lfs diff=lfs merge=lfs -text
