@@ -49,7 +49,6 @@ function AdminPanel() {
     { id: 'users', label: 'Users', icon: 'M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z' },
     { id: 'supportGroups', label: 'Support Groups', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
     { id: 'sleepMusic', label: 'Sleep Music', icon: 'M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3' },
-    { id: 'analytics', label: 'Analytics', icon: 'M9 2a1 1 0 000 2h2a1 1 0 100-2H9z M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z' },
     // { id: 'reports', label: 'Reports', icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
   ];
 
@@ -87,19 +86,23 @@ function AdminPanel() {
     <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
       <div
-        className={`bg-surface h-screen shadow-xl px-3 w-60 overflow-x-hidden transition-all duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          } md:translate-x-0 absolute md:relative z-30`}
+        className={`bg-surface min-h-screen shadow-xl px-3 w-60 overflow-x-hidden transition-all duration-300 ease-in-out ${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        } md:translate-x-0 fixed md:relative z-30 flex flex-col`}
       >
-        <div className="space-y-6 md:space-y-10 mt-10">
-          <h1 className="hidden md:block font-bold text-sm md:text-xl text-center">
-            Admin<span className="text-primary">Panel</span>
-          </h1>
-          <div id="profile" className="space-y-3">
+        <div className="flex flex-col flex-grow">
+          <div className="py-6">
+            <h1 className="hidden md:block font-bold text-sm md:text-xl text-center">
+              Admin<span className="text-primary">Panel</span>
+            </h1>
+          </div>
+
+          <div id="profile" className="space-y-3 mb-6">
             {userData?.profilePicture && (
               <img
                 src={userData.profilePicture}
                 alt="Admin user"
-                className="w-10 md:w-16 rounded-full mx-auto"
+                className="w-12 md:w-20 rounded-full mx-auto aspect-square object-cover"
               />
             )}
             <div>
@@ -109,12 +112,14 @@ function AdminPanel() {
               <p className="text-xs text-disabled text-center">{userData?.role || "Administrator"}</p>
             </div>
           </div>
-          <div id="menu" className="flex flex-col space-y-2">
+
+          <div id="menu" className="flex-grow space-y-2">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                className={`text-sm font-medium text-text py-2 px-2 hover:bg-primary hover:text-white hover:scale-105 rounded-md transition duration-150 ease-in-out ${activeTab === tab.id ? 'bg-primary text-white' : ''
-                  }`}
+                className={`w-full text-sm font-medium text-text py-2 px-2 hover:bg-primary hover:text-white hover:scale-105 rounded-md transition duration-150 ease-in-out ${
+                  activeTab === tab.id ? 'bg-primary text-white' : ''
+                }`}
                 onClick={() => setActiveTab(tab.id)}
               >
                 <div className="flex items-center">
@@ -135,7 +140,7 @@ function AdminPanel() {
       </div>
 
       {/* Collapsed Sidebar Button */}
-      <div className="md:hidden absolute top-4 left-4 z-40">
+      <div className="md:hidden fixed top-4 left-4 z-40">
         <button
           className="p-2 bg-surface rounded-md shadow-md"
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -158,7 +163,7 @@ function AdminPanel() {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 bg-background">
+      <div className="flex-1 bg-background min-h-screen w-full md:w-[calc(100%-15rem)]">
         <AdminHeader />
         <div className="p-4">
           {isSidebarOpen && (
