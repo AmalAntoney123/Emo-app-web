@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Table, Badge, Tabs } from 'flowbite-react';
+import { Card, Table, Badge, Tabs, Button, TextInput } from 'flowbite-react';
 import { db } from '../../firebase';
-import { ref, get } from 'firebase/database';
+import { ref, get, set } from 'firebase/database';
 import { FaCrown, FaMoneyBillWave, FaUsers, FaChartLine } from 'react-icons/fa';
 import { format } from 'date-fns';
 
@@ -49,6 +49,10 @@ function EmoElevateManagement() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortConfig, setSortConfig] = useState({ key: 'startDate', direction: 'desc' });
 
+  const [membershipCost, setMembershipCost] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [updateMessage, setUpdateMessage] = useState('');
+
   const calculateMonthlyRevenue = (users) => {
     const currentDate = new Date();
     const currentMonth = currentDate.getMonth();
@@ -81,6 +85,7 @@ function EmoElevateManagement() {
 
   useEffect(() => {
     fetchPremiumStats();
+    fetchMembershipCost();
   }, []);
 
   const fetchPremiumStats = async () => {
@@ -176,6 +181,37 @@ function EmoElevateManagement() {
       }
     } catch (error) {
       console.error('Error fetching premium stats:', error);
+    }
+  };
+
+  const fetchMembershipCost = async () => {
+    try {
+      const settingsRef = ref(db, 'settings/elevatePrice');
+      const snapshot = await get(settingsRef);
+      if (snapshot.exists()) {
+        setMembershipCost(snapshot.val().toString());
+      }
+    } catch (error) {
+      console.error('Error fetching membership cost:', error);
+    }
+  };
+
+  const handleUpdateMembershipCost = async () => {
+    try {
+      const cost = parseFloat(membershipCost);
+      if (isNaN(cost) || cost <= 0) {
+        setUpdateMessage('Please enter a valid amount');
+        return;
+      }
+
+      const settingsRef = ref(db, 'settings/elevatePrice');
+      await set(settingsRef, cost);
+      setIsEditing(false);
+      setUpdateMessage('Membership cost updated successfully!');
+      setTimeout(() => setUpdateMessage(''), 3000);
+    } catch (error) {
+      console.error('Error updating membership cost:', error);
+      setUpdateMessage('Failed to update membership cost');
     }
   };
 
@@ -393,6 +429,49 @@ function EmoElevateManagement() {
     </div>
   );
 
+  const renderSettings = () => (
+    <Card className="mb-4">
+      <h5 className="text-xl font-bold mb-4">Membership Settings</h5>
+      <div className="space-y-4">
+        <div className="flex items-center gap-4">
+          <div className="flex-1">
+            {isEditing ? (
+              <TextInput
+                type="number"
+                value={membershipCost}
+                onChange={(e) => setMembershipCost(e.target.value)}
+                placeholder="Enter new membership cost"
+              />
+            ) : (
+              <div className="text-lg">
+                Current Membership Cost: ₹{membershipCost}
+              </div>
+            )}
+          </div>
+          {isEditing ? (
+            <div className="flex gap-2">
+              <Button onClick={handleUpdateMembershipCost} color="success">
+                Save
+              </Button>
+              <Button onClick={() => setIsEditing(false)} color="gray">
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <Button onClick={() => setIsEditing(true)} color="primary">
+              Edit Cost
+            </Button>
+          )}
+        </div>
+        {updateMessage && (
+          <div className={`text-sm ${updateMessage.includes('success') ? 'text-green-600' : 'text-red-600'}`}>
+            {updateMessage}
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+
   return (
     <div className="space-y-4">
       <Tabs>
@@ -401,6 +480,7 @@ function EmoElevateManagement() {
           title="Dashboard"
           icon={FaChartLine}
         >
+          {renderSettings()}
           {renderDashboard()}
         </Tabs.Item>
         

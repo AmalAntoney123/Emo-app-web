@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card } from 'flowbite-react';
 import { db } from '../../firebase';
 import { ref, get } from 'firebase/database';
-import { FaUsers, FaUserCheck, FaBook, FaSmile, FaHeart, FaBrain, FaCrown } from 'react-icons/fa';
+import { FaUsers, FaUserCheck, FaBook, FaSmile, FaHeart, FaBrain, FaCrown, FaChartLine } from 'react-icons/fa';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -365,6 +365,27 @@ function Dashboard() {
           value={`${stats.averageMood}/10`}
           icon={FaSmile}
           color="text-yellow-600"
+        />
+        <StatCard 
+          title="Activity Metrics"
+          value={
+            <div className="text-sm">
+              <div className="flex justify-between">
+                <span>Physical:</span>
+                <span>{stats.activityStats?.datasets[0].data[0].toFixed(1)}/10</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Sleep:</span>
+                <span>{stats.activityStats?.datasets[0].data[1].toFixed(1)}/10</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Stress:</span>
+                <span>{stats.activityStats?.datasets[0].data[2].toFixed(1)}/10</span>
+              </div>
+            </div>
+          }
+          icon={FaChartLine}
+          color="text-indigo-600"
         />
       </div>
 
