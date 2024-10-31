@@ -84,7 +84,7 @@ function Login() {
       <div className="hidden md:block w-1/2">
         <div className="flex justify-center items-center h-full p-8">
           <img
-            src="/assets/login-bg.jpeg"
+            src="/assets/login-image.jpeg"
             alt="Login background"
             className="object-cover w-3/4 h-3/4 rounded-lg"
           />
