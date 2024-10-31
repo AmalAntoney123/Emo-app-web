@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase';
 import { ref as databaseRef, get, set, remove, push } from 'firebase/database';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { Tabs } from 'flowbite-react';
+import { FaMusic, FaPlus } from 'react-icons/fa';
 
 function SleepMusic() {
   const [sleepMusic, setSleepMusic] = useState([]);
   const [newMusic, setNewMusic] = useState({ title: '', artist: '', file: null });
   const [editingMusic, setEditingMusic] = useState(null);
-  const [activeTab, setActiveTab] = useState('list'); // New state for active tab
 
   useEffect(() => {
     fetchSleepMusic();
@@ -86,79 +87,77 @@ function SleepMusic() {
     closeEditModal();
   };
 
+  const renderMusicList = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {sleepMusic.map((music) => (
+        <div key={music.id} className="border p-4 rounded">
+          <h4 className="text-lg font-semibold">{music.title}</h4>
+          <p>Artist: {music.artist}</p>
+          <audio src={music.fileUrl} controls className="w-full mt-2"></audio>
+          <div className="mt-2">
+            <button
+              onClick={() => openEditModal(music)}
+              className="bg-yellow-500 text-white p-2 rounded mr-2"
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => deleteMusic(music.id)}
+              className="bg-red-500 text-white p-2 rounded"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderAddMusic = () => (
+    <div className="mb-4">
+      <h3 className="text-xl font-semibold mb-2">Add New Music</h3>
+      <input
+        type="text"
+        placeholder="Title"
+        value={newMusic.title}
+        onChange={(e) => setNewMusic({ ...newMusic, title: e.target.value })}
+        className="mr-2 p-2 border rounded"
+      />
+      <input
+        type="text"
+        placeholder="Artist"
+        value={newMusic.artist}
+        onChange={(e) => setNewMusic({ ...newMusic, artist: e.target.value })}
+        className="mr-2 p-2 border rounded"
+      />
+      <input
+        type="file"
+        accept="audio/*"
+        onChange={(e) => setNewMusic({ ...newMusic, file: e.target.files[0] })}
+        className="mr-2 p-2 border rounded"
+      />
+      <button onClick={addMusic} className="bg-green-500 text-white p-2 rounded">Add Music</button>
+    </div>
+  );
+
   return (
-    <div className="p-4">
-      <h2 className="text-2xl font-bold mb-4">Sleep Music</h2>
-      
-      {/* New tab navigation */}
-      <div className="flex mb-4">
-        <button
-          onClick={() => setActiveTab('list')}
-          className={`mr-2 p-2 rounded ${activeTab === 'list' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+    <div className="space-y-4">
+      <Tabs>
+        <Tabs.Item
+          active
+          title="Music List"
+          icon={FaMusic}
         >
-          List Music
-        </button>
-        <button
-          onClick={() => setActiveTab('add')}
-          className={`p-2 rounded ${activeTab === 'add' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+          {renderMusicList()}
+        </Tabs.Item>
+        
+        <Tabs.Item
+          title="Add New Music"
+          icon={FaPlus}
         >
-          Add New Music
-        </button>
-      </div>
-      
-      {/* Conditional rendering based on active tab */}
-      {activeTab === 'add' && (
-        <div className="mb-4">
-          <h3 className="text-xl font-semibold mb-2">Add New Music</h3>
-          <input
-            type="text"
-            placeholder="Title"
-            value={newMusic.title}
-            onChange={(e) => setNewMusic({ ...newMusic, title: e.target.value })}
-            className="mr-2 p-2 border rounded"
-          />
-          <input
-            type="text"
-            placeholder="Artist"
-            value={newMusic.artist}
-            onChange={(e) => setNewMusic({ ...newMusic, artist: e.target.value })}
-            className="mr-2 p-2 border rounded"
-          />
-          <input
-            type="file"
-            accept="audio/*"
-            onChange={(e) => setNewMusic({ ...newMusic, file: e.target.files[0] })}
-            className="mr-2 p-2 border rounded"
-          />
-          <button onClick={addMusic} className="bg-green-500 text-white p-2 rounded">Add Music</button>
-        </div>
-      )}
-      
-      {activeTab === 'list' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {sleepMusic.map((music) => (
-            <div key={music.id} className="border p-4 rounded">
-              <h4 className="text-lg font-semibold">{music.title}</h4>
-              <p>Artist: {music.artist}</p>
-              <audio src={music.fileUrl} controls className="w-full mt-2"></audio>
-              <div className="mt-2">
-                <button
-                  onClick={() => openEditModal(music)}
-                  className="bg-yellow-500 text-white p-2 rounded mr-2"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => deleteMusic(music.id)}
-                  className="bg-red-500 text-white p-2 rounded"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+          {renderAddMusic()}
+        </Tabs.Item>
+      </Tabs>
 
       {editingMusic && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">

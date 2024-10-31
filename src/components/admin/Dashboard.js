@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card } from 'flowbite-react';
 import { db } from '../../firebase';
 import { ref, get } from 'firebase/database';
-import { FaUsers, FaUserCheck, FaBook, FaSmile, FaHeart, FaBrain } from 'react-icons/fa';
+import { FaUsers, FaUserCheck, FaBook, FaSmile, FaHeart, FaBrain, FaCrown } from 'react-icons/fa';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -42,7 +42,12 @@ function Dashboard() {
     userInterests: [],
     moodTrend: null,
     activityStats: null,
-    userEngagement: null
+    userEngagement: null,
+    totalPremiumUsers: 0,
+    premiumConversion: 0,
+    recentPremiumSignups: 0,
+    premiumRevenue: 0,
+    emoElevateRate: 0
   });
 
   useEffect(() => {
@@ -161,6 +166,42 @@ function Dashboard() {
           stressLevel: activityByType.stressLevel.reduce((a, b) => a + b, 0) / activityByType.stressLevel.length,
         };
 
+        // Calculate premium stats
+        const premiumUsers = userArray.filter(user => 
+          user.emoElevate?.active && new Date(user.emoElevate?.expiryDate) > new Date()
+        );
+        const totalPremiumUsers = premiumUsers.length;
+        const premiumConversion = ((totalPremiumUsers / userArray.length) * 100).toFixed(1);
+        
+        // Calculate recent premium signups (last 30 days)
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const recentPremiumSignups = premiumUsers.filter(user => {
+          const startDate = new Date(user.emoElevate?.startDate);
+          return startDate > thirtyDaysAgo;
+        }).length;
+
+        // Calculate monthly revenue
+        const currentDate = new Date();
+        const monthlyRevenue = userArray
+          .filter(user => user.emoElevate?.active)
+          .reduce((total, user) => {
+            const startDate = new Date(user.emoElevate?.startDate);
+            if (startDate.getMonth() === currentDate.getMonth() && 
+                startDate.getFullYear() === currentDate.getFullYear()) {
+              return total + parseFloat(user.emoElevate?.amount || 0);
+            }
+            return total;
+          }, 0);
+
+        // Calculate Emo Elevate users (active subscribers)
+        const emoElevateUsers = userArray.filter(user => 
+          user.emoElevate?.active && new Date(user.emoElevate?.expiryDate) > new Date()
+        );
+
+        // Calculate conversion rate
+        const emoElevateRate = ((emoElevateUsers.length / totalUsers) * 100).toFixed(1);
+
         setStats({
           totalUsers,
           activeUsers,
@@ -209,7 +250,12 @@ function Dashboard() {
                 'rgba(75, 192, 192, 0.6)'
               ]
             }]
-          }
+          },
+          totalPremiumUsers,
+          premiumConversion,
+          recentPremiumSignups,
+          premiumRevenue: monthlyRevenue.toFixed(2),
+          emoElevateRate
         });
       }
     } catch (error) {
@@ -271,11 +317,35 @@ function Dashboard() {
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard 
+          title="Emo Elevate Users"
+          value={stats.totalPremiumUsers}
+          icon={FaCrown}
+          color="text-yellow-600"
+          subtitle={`${stats.premiumConversion}% conversion`}
+        />
+        <StatCard 
+          title="Monthly Revenue"
+          value={`₹${stats.premiumRevenue}`}
+          icon={FaCrown}
+          color="text-green-600"
+          subtitle="From Emo Elevate subscriptions"
+        />
+        <StatCard 
+          title="New Emo Elevate"
+          value={stats.recentPremiumSignups}
+          icon={FaCrown}
+          color="text-purple-600"
+          subtitle="Last 30 days"
+        />
+        <StatCard 
           title="Total Users"
           value={stats.totalUsers}
           icon={FaUsers}
           color="text-blue-600"
         />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard 
           title="Active Users"
           value={stats.activeUsers}

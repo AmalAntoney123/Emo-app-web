@@ -9,6 +9,7 @@ import Analytics from './Analytics';
 import SupportGroups from './SupportGroups';
 import SleepMusic from './SleepMusic';
 import Reports from './Reports';
+import PremiumManagement from './PremiumManagement';
 
 function AdminPanel() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -50,6 +51,7 @@ function AdminPanel() {
     { id: 'supportGroups', label: 'Support Groups', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
     { id: 'sleepMusic', label: 'Sleep Music', icon: 'M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3' },
     // { id: 'reports', label: 'Reports', icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+    { id: 'premium', label: 'Emo Elevate', icon: 'M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z' },
   ];
 
   const renderActiveTabContent = () => {
@@ -66,6 +68,8 @@ function AdminPanel() {
         return <SleepMusic />;
       case 'reports':
         return <Reports />;
+      case 'premium':
+        return <PremiumManagement />;
       default:
         return <Dashboard />;
     }

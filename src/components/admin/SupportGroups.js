@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase';
 import { ref, get, set, remove, push } from 'firebase/database';
+import { Tabs } from 'flowbite-react';
+import { FaUsers, FaPlus } from 'react-icons/fa';
 
 function SupportGroups() {
-  const [activeTab, setActiveTab] = useState('list');
   const [groups, setGroups] = useState([]);
   const [newGroup, setNewGroup] = useState({ name: '', description: '' });
   const [editingGroup, setEditingGroup] = useState(null);
@@ -50,7 +51,6 @@ function SupportGroups() {
     });
     setNewGroup({ name: '', description: '' });
     fetchGroups();
-    setActiveTab('list');
   };
 
   const updateGroup = async () => {
@@ -94,70 +94,70 @@ function SupportGroups() {
     setViewingGroup({ ...group, members: membersWithNames });
   };
 
+  const renderGroupsList = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {groups.map((group) => (
+        <div key={group.id} className="border p-4 rounded">
+          <h3 className="text-xl font-semibold">{group.name}</h3>
+          <p>{group.description}</p>
+          <p>Members: {Object.keys(group.members || {}).length}</p>
+          <div className="mt-2">
+            <button
+              onClick={() => handleViewGroup(group)}
+              className="bg-blue-500 text-white p-2 rounded mr-2"
+            >
+              View
+            </button>
+            <button
+              onClick={() => deleteGroup(group.id)}
+              className="bg-red-500 text-white p-2 rounded"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderAddGroup = () => (
+    <div className="mb-4">
+      <input
+        type="text"
+        placeholder="Group Name"
+        value={newGroup.name}
+        onChange={(e) => setNewGroup({ ...newGroup, name: e.target.value })}
+        className="mr-2 p-2 border rounded"
+      />
+      <input
+        type="text"
+        placeholder="Description"
+        value={newGroup.description}
+        onChange={(e) => setNewGroup({ ...newGroup, description: e.target.value })}
+        className="mr-2 p-2 border rounded"
+      />
+      <button onClick={addGroup} className="bg-green-500 text-white p-2 rounded">Add Group</button>
+    </div>
+  );
+
   return (
-    <div className="p-4">
-      <h2 className="text-2xl font-bold mb-4">Support Groups</h2>
-      
-      <div className="mb-4">
-        <button
-          onClick={() => setActiveTab('list')}
-          className={`mr-2 p-2 ${activeTab === 'list' ? 'bg-blue-500 text-white' : 'bg-gray-200'} rounded`}
+    <div className="space-y-4">
+      <Tabs>
+        <Tabs.Item
+          active
+          title="Groups List"
+          icon={FaUsers}
         >
-          List Groups
-        </button>
-        <button
-          onClick={() => setActiveTab('add')}
-          className={`p-2 ${activeTab === 'add' ? 'bg-blue-500 text-white' : 'bg-gray-200'} rounded`}
+          {renderGroupsList()}
+        </Tabs.Item>
+        
+        <Tabs.Item
+          title="Add New Group"
+          icon={FaPlus}
         >
-          Add New Group
-        </button>
-      </div>
-
-      {activeTab === 'add' && (
-        <div className="mb-4">
-          <input
-            type="text"
-            placeholder="Group Name"
-            value={newGroup.name}
-            onChange={(e) => setNewGroup({ ...newGroup, name: e.target.value })}
-            className="mr-2 p-2 border rounded"
-          />
-          <input
-            type="text"
-            placeholder="Description"
-            value={newGroup.description}
-            onChange={(e) => setNewGroup({ ...newGroup, description: e.target.value })}
-            className="mr-2 p-2 border rounded"
-          />
-          <button onClick={addGroup} className="bg-green-500 text-white p-2 rounded">Add Group</button>
-        </div>
-      )}
-
-      {activeTab === 'list' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {groups.map((group) => (
-            <div key={group.id} className="border p-4 rounded">
-              <h3 className="text-xl font-semibold">{group.name}</h3>
-              <p>{group.description}</p>
-              <p>Members: {Object.keys(group.members || {}).length}</p>
-              <div className="mt-2">
-                <button
-                  onClick={() => handleViewGroup(group)}
-                  className="bg-blue-500 text-white p-2 rounded mr-2"
-                >
-                  View
-                </button>
-                <button
-                  onClick={() => deleteGroup(group.id)}
-                  className="bg-red-500 text-white p-2 rounded"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+          {renderAddGroup()}
+        </Tabs.Item>
+      </Tabs>
 
       {viewingGroup && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
