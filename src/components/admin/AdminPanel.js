@@ -88,45 +88,76 @@ function AdminPanel() {
 
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Sidebar */}
+      {/* Sidebar - Updated with solid background */}
       <div
-        className={`bg-surface min-h-screen shadow-xl px-3 w-60 overflow-x-hidden transition-all duration-300 ease-in-out ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } md:translate-x-0 fixed md:relative z-30 flex flex-col`}
+        className={`bg-surface min-h-screen w-full md:w-60 overflow-hidden transition-all duration-500 ease-in-out fixed 
+          ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
+          md:translate-x-0 md:relative z-30 flex flex-col
+          ${!isSidebarOpen ? 'invisible' : 'visible'}
+          bg-white dark:bg-gray-900 shadow-xl
+        `}
       >
-        <div className="flex flex-col flex-grow">
+        <div className="flex flex-col flex-grow items-center justify-center md:items-stretch md:justify-start">
+          {/* Close button for mobile */}
+          <button
+            className="absolute top-4 right-4 p-2 md:hidden text-primary"
+            onClick={() => setIsSidebarOpen(false)}
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+
           <div className="py-6">
-            <h1 className="hidden md:block font-bold text-sm md:text-xl text-center">
+            <h1 className="font-bold text-xl text-center">
               Admin<span className="text-primary">Panel</span>
             </h1>
           </div>
 
+          {/* Profile section - centered on mobile */}
           <div id="profile" className="space-y-3 mb-6">
             {userData?.profilePicture && (
               <img
                 src={userData.profilePicture}
                 alt="Admin user"
-                className="w-12 md:w-20 rounded-full mx-auto aspect-square object-cover"
+                className="w-20 rounded-full mx-auto aspect-square object-cover"
               />
             )}
             <div>
-              <h2 className="font-medium text-xs md:text-sm text-center text-primary">
+              <h2 className="font-medium text-sm text-center text-primary">
                 {userData?.name || user?.displayName || "Admin User"}
               </h2>
               <p className="text-xs text-disabled text-center">{userData?.role || "Administrator"}</p>
             </div>
           </div>
 
-          <div id="menu" className="flex-grow space-y-2">
+          {/* Menu - Updated for mobile */}
+          <div id="menu" className="flex-grow space-y-4 w-full max-w-xs px-4 md:px-0">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                className={`w-full text-sm font-medium text-text py-2 px-2 hover:bg-primary hover:text-white hover:scale-105 rounded-md transition duration-150 ease-in-out ${
-                  activeTab === tab.id ? 'bg-primary text-white' : ''
-                }`}
-                onClick={() => setActiveTab(tab.id)}
+                className={`w-full text-lg md:text-sm font-medium text-text py-3 md:py-2 px-4 
+                  hover:bg-primary hover:text-white rounded-md transition-all duration-300 ease-in-out
+                  transform hover:scale-105 active:scale-95
+                  ${activeTab === tab.id ? 'bg-primary text-white scale-105' : ''}`}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  if (window.innerWidth < 768) {
+                    setIsSidebarOpen(false);
+                  }
+                }}
               >
-                <div className="flex items-center">
+                <div className="flex items-center justify-center md:justify-start">
                   <svg
                     className="w-6 h-6 fill-current"
                     fill="currentColor"
@@ -135,7 +166,7 @@ function AdminPanel() {
                   >
                     <path d={tab.icon}></path>
                   </svg>
-                  <span className="ml-2">{tab.label}</span>
+                  <span className="ml-3">{tab.label}</span>
                 </div>
               </button>
             ))}
@@ -143,14 +174,14 @@ function AdminPanel() {
         </div>
       </div>
 
-      {/* Collapsed Sidebar Button */}
-      <div className="md:hidden fixed top-4 left-4 z-40">
+      {/* Updated hamburger button with higher z-index */}
+      <div className="md:hidden fixed top-4 left-4 z-50">
         <button
-          className="p-2 bg-surface rounded-md shadow-md"
+          className="p-2 bg-surface rounded-md shadow-md hover:bg-primary hover:text-white transition-colors duration-200"
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
         >
           <svg
-            className="w-6 h-6 text-primary"
+            className="w-6 h-6"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -166,13 +197,13 @@ function AdminPanel() {
         </button>
       </div>
 
-      {/* Main content */}
+      {/* Main content - Removed overlay blur */}
       <div className="flex-1 bg-background min-h-screen w-full md:w-[calc(100%-15rem)]">
         <AdminHeader />
         <div className="p-4">
           {isSidebarOpen && (
             <div
-              className="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"
+              className="fixed inset-0 bg-black bg-opacity-40 z-20 md:hidden transition-opacity duration-500"
               onClick={() => setIsSidebarOpen(false)}
             ></div>
           )}
