@@ -24,11 +24,13 @@ function Header() {
     <header className="bg-white shadow-md">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center py-4">
-          <img
-            src="/assets/logo.png"
-            alt="Emo Logo"
-            className="w-16 h-16"
-          />
+          <Link to="/" className="flex items-center">
+            <img
+              src="/assets/logo.png"
+              alt="Emo Logo"
+              className="w-16 h-16 cursor-pointer hover:opacity-80 transition-opacity duration-300"
+            />
+          </Link>
           
           {/* Hamburger menu for small screens */}
           <button

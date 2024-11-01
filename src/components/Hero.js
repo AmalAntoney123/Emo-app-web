@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useSpring, animated } from 'react-spring';
 import RevealOnScroll from './RevealOnScroll';
 import { FaQuestionCircle } from 'react-icons/fa';
-import InstallModal from './InstallModal';
 
 function Hero() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -32,20 +31,11 @@ function Hero() {
               <p className="text-xl text-gray-600 mb-8">Your companion for mental health and wellbeing</p>
               <div className="flex items-center">
                 <a
-                  href="/assets/emo-app.apk"
-                  download="emo-app.apk"
-                  className="inline-block bg-primary text-white font-bold py-3 px-8 rounded-full hover:bg-primaryLight transition duration-300 transform hover:scale-105 mr-2"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleDownload();
-                  }}
+                  href="/downloads"
+                  className="inline-block bg-primary text-white font-bold py-3 px-8 rounded-full hover:bg-primaryLight transition duration-300 transform hover:scale-105"
                 >
-                  Download Now
+                  Download Emo
                 </a>
-                <FaQuestionCircle
-                  className="text-primary text-2xl cursor-pointer hover:text-primaryLight transition duration-300"
-                  onClick={() => setIsModalOpen(true)}
-                />
               </div>
             </div>
           </RevealOnScroll>
@@ -60,7 +50,6 @@ function Hero() {
           </RevealOnScroll>
         </div>
       </div>
-      <InstallModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </section>
   );
 }

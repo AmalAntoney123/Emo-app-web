@@ -10,6 +10,7 @@ import Testimonials from './components/Testimonials';
 import Footer from './components/Footer';
 import Login from './components/Login';
 import AdminPanel from './components/admin/AdminPanel';
+import Downloads from './pages/Downloads';
 
 
 
@@ -36,6 +37,7 @@ function App() {
           <Route path="/" element={<><Header /><MainContent /><Footer /></>} />
           <Route path="/login" element={<><Header /><Login /><Footer /></>} />
           <Route path="/admin" element={<AdminPanel />} />
+          <Route path="/downloads" element={<Downloads />} />
         </Routes>
       </div>
     </Router>

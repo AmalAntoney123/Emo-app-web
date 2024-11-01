@@ -36,3 +36,24 @@
     transform: rotate(360deg);
   }
 }
+
+.app-screenshots-swiper {
+  padding: 20px 10px;
+}
+
+.app-screenshots-swiper .swiper-slide {
+  transition: transform 0.3s;
+}
+
+.app-screenshots-swiper .swiper-slide:hover {
+  transform: scale(1.05);
+}
+
+.app-screenshots-swiper .swiper-button-next,
+.app-screenshots-swiper .swiper-button-prev {
+  color: #9793eb;
+}
+
+.app-screenshots-swiper .swiper-pagination-bullet-active {
+  background: #FFF9FF;
+}
