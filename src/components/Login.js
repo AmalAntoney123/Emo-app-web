@@ -18,10 +18,12 @@ function Login() {
   const { login, loginWithGoogle, user, isAdmin, resetPassword } = useAuth();
 
   useEffect(() => {
-    if (user && isAdmin) {
-      navigate('/admin');
+    if (user && !loading) {
+      const destination = isAdmin ? '/admin/dashboard' : '/dashboard';
+      console.log(`Redirecting to ${destination}. Is admin:`, isAdmin);
+      navigate(destination, { replace: true });
     }
-  }, [user, isAdmin, navigate]);
+  }, [user, isAdmin, loading, navigate]);
 
   function Loader() {
     return (
@@ -47,11 +49,13 @@ function Login() {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setError('');
-    const result = await loginWithGoogle();
-    if (result.success) {
-      // Handle successful login
-    } else {
-      setError(result.message);
+    try {
+      const result = await loginWithGoogle();
+      if (!result.success) {
+        setError(result.message);
+      }
+    } catch (error) {
+      setError('An unexpected error occurred');
     }
     setLoading(false);
   };

@@ -11,6 +11,9 @@ import Footer from './components/Footer';
 import Login from './components/Login';
 import AdminPanel from './components/admin/AdminPanel';
 import Downloads from './pages/Downloads';
+import UserDashboard from './components/user/UserDashboard';
+import AuthGuard from './components/AuthGuard';
+import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 
 
 
@@ -35,9 +38,24 @@ function App() {
         </Helmet>
         <Routes>
           <Route path="/" element={<><Header /><MainContent /><Footer /></>} />
-          <Route path="/login" element={<><Header /><Login /><Footer /></>} />
-          <Route path="/admin" element={<AdminPanel />} />
+          <Route 
+            path="/login" 
+            element={
+              <AuthGuard>
+                <Login />
+              </AuthGuard>
+            } 
+          />
+          <Route 
+            path="/admin" 
+            element={
+              <ProtectedAdminRoute>
+                <AdminPanel />
+              </ProtectedAdminRoute>
+            } 
+          />
           <Route path="/downloads" element={<Downloads />} />
+          <Route path="/dashboard" element={<UserDashboard />} />
         </Routes>
       </div>
     </Router>

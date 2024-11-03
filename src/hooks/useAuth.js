@@ -10,32 +10,52 @@ export const useAuth = () => {
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isActive, setIsActive] = useState(true);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
+    let mounted = true;
+    
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
-      setIsEmailVerified(user?.emailVerified ?? false);
-
+      if (!mounted) return;
+      
+      setLoading(true);
       if (user) {
         try {
           const userSnapshot = await get(ref(db, `users/${user.uid}`));
           const userData = userSnapshot.val();
-
-          setIsAdmin(userData?.role === 'admin');
-          setIsActive(userData?.isActive !== false);
+          
+          if (mounted) {
+            setUser(user);
+            setIsEmailVerified(user.emailVerified);
+            setIsAdmin(userData?.role === 'admin');
+            setIsActive(userData?.isActive !== false);
+            console.log('Updated auth state - Role:', userData?.role);
+            console.log('Updated auth state - Is Admin:', userData?.role === 'admin');
+          }
         } catch (error) {
           console.error("Failed to fetch user's data:", error);
+          if (mounted) {
+            setIsAdmin(false);
+            setIsActive(true);
+          }
+        }
+      } else {
+        if (mounted) {
+          setUser(null);
           setIsAdmin(false);
           setIsActive(true);
         }
-      } else {
-        setIsAdmin(false);
-        setIsActive(true);
+      }
+      if (mounted) {
+        setLoading(false);
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
   }, []);
 
   const getErrorMessage = (error) => {
@@ -73,11 +93,12 @@ export const useAuth = () => {
       
       const userSnapshot = await get(ref(db, `users/${userCredential.user.uid}`));
       const userData = userSnapshot.val();
+      
       if (userData?.isActive === false) {
         return { success: false, message: 'Your account has been disabled.' };
       }
-      
-      if (userData?.role !== 'admin') {
+
+      if (userData?.role !== 'admin' && window.location.pathname.includes('/admin')) {
         return { success: false, message: 'You do not have admin privileges.' };
       }
       
@@ -98,12 +119,15 @@ export const useAuth = () => {
       if (userData?.isActive === false) {
         return { success: false, message: 'Your account has been disabled.' };
       }
-      
-      if (userData?.role !== 'admin') {
+
+      if (userData?.role !== 'admin' && window.location.pathname.includes('/admin')) {
         return { success: false, message: 'You do not have admin privileges.' };
       }
+
+      console.log('Google Sign In - User Role:', userData?.role);
+      console.log('Google Sign In - Is Admin:', userData?.role === 'admin');
       
-      return { success: true, user };
+      return { success: true, user, isAdmin: userData?.role === 'admin' };
     } catch (error) {
       return { success: false, message: getErrorMessage(error) };
     }
@@ -140,6 +164,7 @@ export const useAuth = () => {
     loginWithGoogle, 
     logout, 
     redirectToLogin,
-    resetPassword
+    resetPassword,
+    loading
   };
 };
