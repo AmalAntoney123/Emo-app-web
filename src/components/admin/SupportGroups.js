@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../../firebase';
+import { db, auth } from '../../firebase';
 import { ref, get, set, remove, push } from 'firebase/database';
 import { Tabs } from 'flowbite-react';
 import { FaUsers, FaPlus } from 'react-icons/fa';
@@ -42,15 +42,27 @@ function SupportGroups() {
   };
 
   const addGroup = async () => {
-    const groupsRef = ref(db, 'supportGroups');
-    await push(groupsRef, {
-      ...newGroup,
-      createdAt: Date.now(),
-      members: {},
-      messages: {},
-    });
-    setNewGroup({ name: '', description: '' });
-    fetchGroups();
+    try {
+      if (!newGroup.name.trim()) {
+        alert('Please enter a group name');
+        return;
+      }
+
+      const groupsRef = ref(db, 'supportGroups');
+      await push(groupsRef, {
+        name: newGroup.name.trim(),
+        description: newGroup.description.trim(),
+        createdAt: Date.now(),
+        createdBy: auth.currentUser.uid,
+        members: {},
+        messages: {},
+      });
+      setNewGroup({ name: '', description: '' });
+      await fetchGroups();
+    } catch (error) {
+      console.error('Error adding group:', error);
+      alert('Failed to add group. Please try again.');
+    }
   };
 
   const updateGroup = async () => {

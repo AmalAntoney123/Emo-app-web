@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { FcGoogle } from 'react-icons/fc';
-import ErrorMessage from './ErrorMessage'; // Import the new ErrorMessage component
+import ErrorMessage from './ErrorMessage';
 
 function Login() {
   const [email, setEmail] = useState('');
