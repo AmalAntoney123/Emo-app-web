@@ -14,6 +14,8 @@ import Downloads from './pages/Downloads';
 import UserDashboard from './components/user/UserDashboard';
 import AuthGuard from './components/AuthGuard';
 import ProtectedAdminRoute from './components/ProtectedAdminRoute';
+import TherapistDashboard from './components/therapist/TherapistDashboard';
+import ProtectedTherapistRoute from './components/ProtectedTherapistRoute';
 
 
 
@@ -56,6 +58,14 @@ function App() {
           />
           <Route path="/downloads" element={<Downloads />} />
           <Route path="/dashboard" element={<UserDashboard />} />
+          <Route 
+            path="/therapist/dashboard" 
+            element={
+              <ProtectedTherapistRoute>
+                <TherapistDashboard />
+              </ProtectedTherapistRoute>
+            } 
+          />
         </Routes>
       </div>
     </Router>

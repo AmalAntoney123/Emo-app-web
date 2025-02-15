@@ -9,8 +9,10 @@ export const useAuth = () => {
   const [user, setUser] = useState(null);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isTherapist, setIsTherapist] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [therapistData, setTherapistData] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -25,32 +27,70 @@ export const useAuth = () => {
           const userSnapshot = await get(ref(db, `users/${user.uid}`));
           const userData = userSnapshot.val();
           
+          // Check if we're in the admin section creating a therapist
+          const isAdminCreatingTherapist = 
+            window.location.pathname.includes('/admin/therapists');
+
           if (mounted) {
-            setUser(user);
-            setIsEmailVerified(user.emailVerified);
-            setIsAdmin(userData?.role === 'admin');
-            setIsActive(userData?.isActive !== false);
-            console.log('Updated auth state - Role:', userData?.role);
-            console.log('Updated auth state - Is Admin:', userData?.role === 'admin');
+            // Only update auth state if we're not in therapist creation flow
+            if (!isAdminCreatingTherapist) {
+              setUser(user);
+              setIsEmailVerified(user.emailVerified);
+              setIsAdmin(userData?.role === 'admin');
+              setIsTherapist(userData?.role === 'therapist');
+              setIsActive(userData?.isActive !== false);
+
+              // If user is a therapist, fetch therapist data
+              if (userData?.role === 'therapist') {
+                const therapistsRef = ref(db, 'therapists');
+                const therapistsSnapshot = await get(therapistsRef);
+                
+                if (therapistsSnapshot.exists()) {
+                  const therapistsData = therapistsSnapshot.val();
+                  const therapistInfo = Object.values(therapistsData).find(
+                    t => t.uid === user.uid
+                  );
+                  
+                  if (therapistInfo) {
+                    setTherapistData(therapistInfo);
+                    localStorage.setItem('therapistData', JSON.stringify(therapistInfo));
+                  }
+                }
+              }
+            }
           }
         } catch (error) {
           console.error("Failed to fetch user's data:", error);
           if (mounted) {
             setIsAdmin(false);
+            setIsTherapist(false);
             setIsActive(true);
+            setTherapistData(null);
           }
         }
       } else {
         if (mounted) {
           setUser(null);
           setIsAdmin(false);
+          setIsTherapist(false);
           setIsActive(true);
+          setTherapistData(null);
         }
       }
       if (mounted) {
         setLoading(false);
       }
     });
+
+    // Try to load therapist data from localStorage on initial mount
+    const storedTherapistData = localStorage.getItem('therapistData');
+    if (storedTherapistData) {
+      try {
+        setTherapistData(JSON.parse(storedTherapistData));
+      } catch (error) {
+        console.error('Error parsing stored therapist data:', error);
+      }
+    }
 
     return () => {
       mounted = false;
@@ -87,10 +127,8 @@ export const useAuth = () => {
   const login = async (email, password) => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      if (!userCredential.user.emailVerified) {
-        return { success: false, message: 'Please verify your email before logging in.' };
-      }
       
+      // First check user collection
       const userSnapshot = await get(ref(db, `users/${userCredential.user.uid}`));
       const userData = userSnapshot.val();
       
@@ -98,7 +136,33 @@ export const useAuth = () => {
         return { success: false, message: 'Your account has been disabled.' };
       }
 
-      if (userData?.role !== 'admin' && window.location.pathname.includes('/admin')) {
+      // If user is a therapist, fetch additional therapist data
+      if (userData?.role === 'therapist') {
+        const therapistsRef = ref(db, 'therapists');
+        const therapistsSnapshot = await get(therapistsRef);
+        
+        if (therapistsSnapshot.exists()) {
+          const therapistsData = therapistsSnapshot.val();
+          const therapistInfo = Object.values(therapistsData).find(
+            t => t.uid === userCredential.user.uid
+          );
+          
+          if (therapistInfo) {
+            localStorage.setItem('therapistData', JSON.stringify(therapistInfo));
+            
+            // Only redirect if this is an actual login, not a temporary auth state change
+            if (!userCredential.user._isAdminCreatingTherapist) {
+              navigate('/therapist/dashboard');
+            }
+            return { success: true, user: userCredential.user, therapistData: therapistInfo };
+          }
+        }
+      }
+
+      // Handle other role redirections
+      if (userData?.role === 'admin' && !window.location.pathname.includes('/admin')) {
+        navigate('/admin/dashboard');
+      } else if (userData?.role === 'user' && window.location.pathname.includes('/admin')) {
         return { success: false, message: 'You do not have admin privileges.' };
       }
       
@@ -159,7 +223,9 @@ export const useAuth = () => {
     user, 
     isEmailVerified, 
     isAdmin, 
-    isActive, 
+    isTherapist, 
+    isActive,
+    therapistData, 
     login, 
     loginWithGoogle, 
     logout, 
