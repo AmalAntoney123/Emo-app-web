@@ -1,14 +1,22 @@
-import React, { useEffect } from 'react';
-import { FaUserCircle, FaEdit } from 'react-icons/fa';
+import React, { useState, useEffect } from 'react';
+import { FaUserCircle, FaEdit, FaKey } from 'react-icons/fa';
 import { useAuth } from '../../hooks/useAuth';
+import EditProfileModal from './EditProfileModal';
+import PasswordResetModal from './PasswordResetModal';
 
 function Profile() {
-  const { therapistData } = useAuth();
+  const { therapistData, setTherapistData } = useAuth();
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   // Log the data to verify what we're receiving
   useEffect(() => {
     console.log('Current therapist data:', therapistData);
   }, [therapistData]);
+
+  const handleProfileUpdate = (updatedData) => {
+    setTherapistData({ ...therapistData, ...updatedData });
+  };
 
   if (!therapistData) {
     return (
@@ -23,10 +31,22 @@ function Profile() {
       <div className="bg-surface rounded-lg shadow-md p-8">
         <div className="flex justify-between items-start mb-6">
           <h2 className="text-2xl font-bold">Profile Information</h2>
-          <button className="flex items-center space-x-2 text-primary hover:text-primaryLight">
-            <FaEdit />
-            <span>Edit Profile</span>
-          </button>
+          <div className="flex space-x-4">
+            <button 
+              onClick={() => setShowPasswordModal(true)}
+              className="flex items-center space-x-2 text-primary hover:text-primaryLight"
+            >
+              <FaKey />
+              <span>Change Password</span>
+            </button>
+            <button 
+              onClick={() => setShowEditModal(true)}
+              className="flex items-center space-x-2 text-primary hover:text-primaryLight"
+            >
+              <FaEdit />
+              <span>Edit Profile</span>
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-col md:flex-row items-start space-y-6 md:space-y-0 md:space-x-8">
@@ -95,6 +115,18 @@ function Profile() {
           Hourly Rate: ₹{therapistData.hourlyRate}/hour
         </p>
       </div>
+
+      <EditProfileModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        therapistData={therapistData}
+        onUpdate={handleProfileUpdate}
+      />
+
+      <PasswordResetModal
+        isOpen={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+      />
     </div>
   );
 }

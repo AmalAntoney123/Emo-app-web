@@ -6,8 +6,8 @@ import { Tabs } from 'flowbite-react';
 import { FaUserMd, FaPlus } from 'react-icons/fa';
 import Select from 'react-select';
 import emailjs from '@emailjs/browser';
-import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
+import { initializeApp } from 'firebase/app';
 import { firebaseConfig } from '../../firebase'; // Make sure this path is correct
 
 // Add these constants at the top of your file (replace with your actual values from EmailJS)
@@ -109,15 +109,16 @@ function Therapists() {
         throw new Error('Password generation failed');
       }
       
-      console.log('Generated password:', password); // For debugging
+      // Create a new Firebase app instance for therapist creation
+      const therapistAuth = getAuth(initializeApp(firebaseConfig, 'therapistCreation'));
       
-      // Create therapist auth account using the existing auth instance
+      // Create therapist auth account using the separate auth instance
       if (!newTherapist.email || !password) {
         throw new Error('Email and password are required');
       }
 
       const userCredential = await createUserWithEmailAndPassword(
-        auth,
+        therapistAuth,
         newTherapist.email.trim(),
         password.toString()
       );
@@ -141,9 +142,6 @@ function Therapists() {
         createdAt: Date.now(),
         languages: newTherapist.languages.join(', '),
       });
-
-      // Sign out the newly created therapist account immediately
-      await signOut(auth);
 
       // Send welcome email using EmailJS
       await emailjs.send(
@@ -176,6 +174,7 @@ function Therapists() {
         availability: '',
         hourlyRate: '',
       });
+
       
       fetchTherapists();
     } catch (error) {

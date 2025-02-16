@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { db } from '../../firebase';
-import { ref, get } from 'firebase/database';
+import { ref, get, set } from 'firebase/database';
 import TherapistHeader from './TherapistHeader';
 import Overview from './Overview';
 import Clients from './Clients';
@@ -15,6 +15,7 @@ function TherapistDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const { user, therapistData } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [bookings, setBookings] = useState([]);
   const [stats, setStats] = useState({
     totalClients: 0,
     upcomingSessions: 0,
@@ -24,7 +25,51 @@ function TherapistDashboard() {
 
   useEffect(() => {
     fetchDashboardData();
+    fetchBookings();
   }, [user]);
+
+  const fetchBookings = async () => {
+    if (!therapistData?.id) return;
+    
+    const bookingsRef = ref(db, `therapistBookings/${therapistData.id}`);
+    try {
+      const snapshot = await get(bookingsRef);
+      if (snapshot.exists()) {
+        const bookingsData = snapshot.val();
+        setBookings(Object.values(bookingsData));
+      }
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+    }
+  };
+
+  const handleBookingUpdate = async (bookingId, status, scheduledDate = null, scheduledTime = null) => {
+    try {
+      const updates = {
+        status,
+        ...(scheduledDate && { scheduledDate }),
+        ...(scheduledTime && { scheduledTime })
+      };
+
+      // Update in therapist's bookings
+      await set(ref(db, `therapistBookings/${therapistData.id}/${bookingId}`), {
+        ...bookings.find(b => b.id === bookingId),
+        ...updates
+      });
+
+      // Update in user's bookings
+      const booking = bookings.find(b => b.id === bookingId);
+      await set(ref(db, `bookings/${booking.userId}/${bookingId}`), {
+        ...booking,
+        ...updates
+      });
+
+      // Refresh bookings
+      fetchBookings();
+    } catch (error) {
+      console.error('Error updating booking:', error);
+    }
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -77,7 +122,12 @@ function TherapistDashboard() {
       case 'clients':
         return <Clients />;
       case 'sessions':
-        return <Sessions />;
+        return (
+          <Sessions 
+            bookings={bookings} 
+            onUpdateBooking={handleBookingUpdate} 
+          />
+        );
       case 'schedule':
         return <Schedule />;
       case 'notes':

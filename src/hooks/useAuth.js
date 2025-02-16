@@ -26,35 +26,28 @@ export const useAuth = () => {
         try {
           const userSnapshot = await get(ref(db, `users/${user.uid}`));
           const userData = userSnapshot.val();
-          
-          // Check if we're in the admin section creating a therapist
-          const isAdminCreatingTherapist = 
-            window.location.pathname.includes('/admin/therapists');
 
           if (mounted) {
-            // Only update auth state if we're not in therapist creation flow
-            if (!isAdminCreatingTherapist) {
-              setUser(user);
-              setIsEmailVerified(user.emailVerified);
-              setIsAdmin(userData?.role === 'admin');
-              setIsTherapist(userData?.role === 'therapist');
-              setIsActive(userData?.isActive !== false);
+            setUser(user);
+            setIsEmailVerified(user.emailVerified);
+            setIsAdmin(userData?.role === 'admin');
+            setIsTherapist(userData?.role === 'therapist');
+            setIsActive(userData?.isActive !== false);
 
-              // If user is a therapist, fetch therapist data
-              if (userData?.role === 'therapist') {
-                const therapistsRef = ref(db, 'therapists');
-                const therapistsSnapshot = await get(therapistsRef);
+            // If user is a therapist, fetch therapist data
+            if (userData?.role === 'therapist') {
+              const therapistsRef = ref(db, 'therapists');
+              const therapistsSnapshot = await get(therapistsRef);
+              
+              if (therapistsSnapshot.exists()) {
+                const therapistsData = therapistsSnapshot.val();
+                const therapistInfo = Object.values(therapistsData).find(
+                  t => t.uid === user.uid
+                );
                 
-                if (therapistsSnapshot.exists()) {
-                  const therapistsData = therapistsSnapshot.val();
-                  const therapistInfo = Object.values(therapistsData).find(
-                    t => t.uid === user.uid
-                  );
-                  
-                  if (therapistInfo) {
-                    setTherapistData(therapistInfo);
-                    localStorage.setItem('therapistData', JSON.stringify(therapistInfo));
-                  }
+                if (therapistInfo) {
+                  setTherapistData(therapistInfo);
+                  localStorage.setItem('therapistData', JSON.stringify(therapistInfo));
                 }
               }
             }

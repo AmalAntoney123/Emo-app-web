@@ -1,112 +1,385 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../../firebase';
-import { ref, get } from 'firebase/database';
+import { getDatabase, ref, onValue, update, get } from 'firebase/database';
 import { useAuth } from '../../hooks/useAuth';
-import { format } from 'date-fns';
-import { FaCheckCircle, FaClock, FaTimesCircle } from 'react-icons/fa';
+import ConfirmBookingModal from './ConfirmBookingModal';
 
-function Sessions() {
-  const [sessions, setSessions] = useState([]);
+const Sessions = () => {
+  const { user, therapistData } = useAuth();
+  const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { therapistData } = useAuth();
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [therapistDocId, setTherapistDocId] = useState(null);
+  const [sessionNotes, setSessionNotes] = useState('');
+  const [showNotesModal, setShowNotesModal] = useState(false);
+  const [selectedSessionForNotes, setSelectedSessionForNotes] = useState(null);
+
+  // Format date helper function
+  const formatDate = (timestamp) => {
+    if (!timestamp) return 'N/A';
+    const date = new Date(timestamp);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  // Format time helper function
+  const formatTime = (timestamp) => {
+    if (!timestamp) return 'N/A';
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   useEffect(() => {
-    fetchSessions();
-  }, [therapistData]);
-
-  const fetchSessions = async () => {
-    try {
-      setLoading(true);
-      const sessionsRef = ref(db, `therapists/${therapistData?.id}/sessions`);
-      const snapshot = await get(sessionsRef);
-      
-      if (snapshot.exists()) {
-        const sessionsData = Object.entries(snapshot.val()).map(([id, session]) => ({
-          id,
-          ...session,
-        }));
-        setSessions(sessionsData.sort((a, b) => new Date(b.date) - new Date(a.date)));
+    const fetchTherapistAndBookings = async () => {
+      if (!user?.uid) {
+        setLoading(false);
+        return;
       }
+
+      try {
+        const db = getDatabase();
+        const therapistsRef = ref(db, 'therapists');
+        
+        // First get the therapist document ID
+        onValue(therapistsRef, (snapshot) => {
+          if (snapshot.exists()) {
+            snapshot.forEach((child) => {
+              const therapist = child.val();
+              if (therapist.uid === user.uid) {
+                setTherapistDocId(child.key);
+                
+                // Now fetch bookings using the therapist doc ID
+                const bookingsRef = ref(db, `therapists/${child.key}/bookings`);
+                onValue(bookingsRef, (bookingsSnapshot) => {
+                  if (bookingsSnapshot.exists()) {
+                    const bookingsData = [];
+                    bookingsSnapshot.forEach((bookingChild) => {
+                      bookingsData.push({
+                        id: bookingChild.key,
+                        ...bookingChild.val()
+                      });
+                    });
+                    setBookings(bookingsData);
+                  } else {
+                    setBookings([]);
+                  }
+                  setLoading(false);
+                });
+              }
+            });
+          } else {
+            setLoading(false);
+          }
+        });
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        setLoading(false);
+      }
+    };
+
+    fetchTherapistAndBookings();
+  }, [user]);
+
+  const generateGoogleMeetLink = (datetime, therapistName, userName) => {
+    const date = new Date(datetime);
+    const formattedDate = date.toISOString().replace(/[^0-9]/g, '').slice(0, 8);
+    const formattedTime = date.toISOString().replace(/[^0-9]/g, '').slice(8, 12);
+    
+    // Create a sanitized title for the meeting
+    const meetingTitle = `Therapy Session - ${therapistName} & ${userName}`;
+    const sanitizedTitle = encodeURIComponent(meetingTitle);
+    
+    // Generate Google Calendar event link with Meet
+    const meetLink = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${sanitizedTitle}&dates=${formattedDate}T${formattedTime}00Z/${formattedDate}T${parseInt(formattedTime) + 100}00Z&details=Therapy%20session%20appointment&add=&crm=AVAILABLE&add=&crm=AVAILABLE`;
+    
+    return meetLink;
+  };
+
+  const handleConfirmBooking = async (datetime, meetLink) => {
+    try {
+      const db = getDatabase();
+      const date = new Date(datetime);
+      
+      if (isNaN(date.getTime())) {
+        alert('Invalid date selected. Please try again.');
+        return;
+      }
+
+      const updates = {
+        status: 'confirmed',
+        scheduledDate: formatDate(date),
+        scheduledTime: formatTime(date),
+        meetLink: meetLink,
+        updatedAt: Date.now()
+      };
+
+      // Update only in therapists collection
+      await update(
+        ref(db, `therapists/${therapistDocId}/bookings/${selectedBooking.id}`),
+        {
+          ...selectedBooking,
+          ...updates
+        }
+      );
+
+      // Update local state
+      setBookings(prevBookings => 
+        prevBookings.map(booking => 
+          booking.id === selectedBooking.id 
+            ? { ...booking, ...updates }
+            : booking
+        )
+      );
+      
+      setSelectedBooking(null);
+      alert('Session confirmed successfully!');
     } catch (error) {
-      console.error('Error fetching sessions:', error);
-    } finally {
-      setLoading(false);
+      console.error('Error in confirmation process:', error);
+      setSelectedBooking(null);
     }
   };
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'completed':
-        return <FaCheckCircle className="text-green-500" />;
-      case 'scheduled':
-        return <FaClock className="text-blue-500" />;
-      case 'cancelled':
-        return <FaTimesCircle className="text-red-500" />;
-      default:
-        return null;
+  const handleRejectBooking = async (booking) => {
+    const db = getDatabase();
+    try {
+      const updates = {
+        status: 'rejected'
+      };
+
+      // Update therapist's booking
+      await update(ref(db, `therapistBookings/${user.uid}/${booking.id}`), updates);
+
+      // Update user's booking
+      await update(ref(db, `bookings/${booking.userId}/${booking.id}`), updates);
+    } catch (error) {
+      console.error('Error rejecting booking:', error);
+    }
+  };
+
+  const handleCompleteSession = async (booking) => {
+    setSelectedSessionForNotes(booking);
+    // Fetch existing notes if any
+    const db = getDatabase();
+    const notesRef = ref(db, `users/${booking.userId}/therapyNotes/${booking.id}`);
+    const snapshot = await get(notesRef);
+    if (snapshot.exists()) {
+      setSessionNotes(snapshot.val().notes);
+    } else {
+      setSessionNotes('');
+    }
+    setShowNotesModal(true);
+  };
+
+  const handleSaveNotes = async () => {
+    if (!selectedSessionForNotes) return;
+
+    try {
+      const db = getDatabase();
+      const updates = {
+        notes: sessionNotes,
+        updatedAt: Date.now(),
+        therapistId: user.uid,
+        therapistName: therapistData?.name || 'Unknown Therapist',
+        sessionDate: selectedSessionForNotes.scheduledDate,
+        sessionTime: selectedSessionForNotes.scheduledTime
+      };
+
+      // Save notes to user's therapy notes
+      await update(
+        ref(db, `users/${selectedSessionForNotes.userId}/therapyNotes/${selectedSessionForNotes.id}`),
+        updates
+      );
+
+      // Update booking status to completed
+      await update(
+        ref(db, `therapists/${therapistDocId}/bookings/${selectedSessionForNotes.id}`),
+        {
+          status: 'completed',
+          hasNotes: true
+        }
+      );
+
+      // Update local state
+      setBookings(prevBookings =>
+        prevBookings.map(booking =>
+          booking.id === selectedSessionForNotes.id
+            ? { ...booking, status: 'completed', hasNotes: true }
+            : booking
+        )
+      );
+
+      setShowNotesModal(false);
+      setSessionNotes('');
+      setSelectedSessionForNotes(null);
+      alert('Session completed successfully!');
+    } catch (error) {
+      console.error('Error completing session:', error);
+      alert('Failed to complete session. Please try again.');
     }
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <div className="text-center p-4">Loading...</div>;
   }
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold mb-6">Sessions</h2>
-      <div className="bg-surface rounded-lg shadow-md overflow-hidden">
-        <table className="min-w-full divide-y divide-divider">
-          <thead className="bg-background">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-disabled uppercase tracking-wider">
-                Date & Time
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-disabled uppercase tracking-wider">
-                Client
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-disabled uppercase tracking-wider">
-                Type
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-disabled uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-disabled uppercase tracking-wider">
-                Duration
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-surface divide-y divide-divider">
-            {sessions.map((session) => (
-              <tr key={session.id} className="hover:bg-background">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {format(new Date(session.date), 'PPp')}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {session.clientName}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {session.type}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center space-x-2">
-                    {getStatusIcon(session.status)}
-                    <span className="capitalize">{session.status}</span>
+    <div className="container mx-auto p-4">
+      <h2 className="text-2xl font-bold mb-4">Session Requests</h2>
+      
+      {bookings.length === 0 ? (
+        <p className="text-center text-gray-600">No booking requests available</p>
+      ) : (
+        <div className="space-y-4">
+          {bookings.map((booking) => (
+            <div key={booking.id} className="border rounded-lg p-6 bg-white shadow-md hover:shadow-lg transition-shadow">
+              <div className="flex justify-between items-start">
+                <div className="space-y-3 flex-1">
+                  {/* Client Info Section */}
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-800">{booking.userName}</h3>
+                    <p className="text-gray-600 text-sm">
+                      Requested: {new Date(booking.requestedAt).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </p>
                   </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {session.duration} minutes
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+
+                  {/* Session Details Section */}
+                  {booking.scheduledDate && (
+                    <div className="bg-gray-50 p-3 rounded-md">
+                      <h4 className="font-medium text-gray-700 mb-2">Session Details</h4>
+                      <p className="text-green-600">
+                        <span className="font-medium">Date:</span> {booking.scheduledDate}
+                      </p>
+                      <p className="text-green-600">
+                        <span className="font-medium">Time:</span> {booking.scheduledTime}
+                      </p>
+                      {booking.meetLink && booking.status === 'confirmed' && (
+                        <a 
+                          href={booking.meetLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center mt-2 text-blue-600 hover:text-blue-800"
+                        >
+                          <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                            <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                          </svg>
+                          Join Google Meet
+                        </a>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Status Badge */}
+                  <div className="mt-2">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
+                      ${booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                      booking.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                      booking.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                      'bg-yellow-100 text-yellow-800'}`}
+                    >
+                      <span className={`w-2 h-2 mr-2 rounded-full
+                        ${booking.status === 'confirmed' ? 'bg-green-400' :
+                        booking.status === 'rejected' ? 'bg-red-400' :
+                        booking.status === 'completed' ? 'bg-blue-400' :
+                        'bg-yellow-400'}`}
+                      ></span>
+                      {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Action Buttons Section */}
+                <div className="ml-4">
+                  {booking.status === 'pending' && (
+                    <div className="flex flex-col gap-2">
+                      <button
+                        onClick={() => setSelectedBooking(booking)}
+                        className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors w-28"
+                      >
+                        Accept
+                      </button>
+                      <button
+                        onClick={() => handleRejectBooking(booking)}
+                        className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition-colors w-28"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  )}
+
+                  {booking.status === 'confirmed' && (
+                    <button
+                      onClick={() => handleCompleteSession(booking)}
+                      className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors w-full"
+                    >
+                      Complete Session
+                    </button>
+                  )}
+
+                  {booking.status === 'completed' && (
+                    <button
+                      onClick={() => handleCompleteSession(booking)}
+                      className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors w-full"
+                    >
+                      Edit Notes
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {selectedBooking && (
+        <ConfirmBookingModal
+          booking={selectedBooking}
+          onConfirm={handleConfirmBooking}
+          onClose={() => setSelectedBooking(null)}
+        />
+      )}
+
+      {/* Notes Modal */}
+      {showNotesModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+            <h3 className="text-xl font-semibold mb-4">
+              {selectedSessionForNotes?.status === 'completed' ? 'Edit Session Notes' : 'Complete Session'}
+            </h3>
+            <textarea
+              value={sessionNotes}
+              onChange={(e) => setSessionNotes(e.target.value)}
+              className="w-full h-64 p-2 border rounded mb-4"
+              placeholder="Enter session notes here..."
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowNotesModal(false)}
+                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveNotes}
+                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+              >
+                {selectedSessionForNotes?.status === 'completed' ? 'Save Notes' : 'Complete Session'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-}
+};
 
 export default Sessions; 
