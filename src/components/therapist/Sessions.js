@@ -12,6 +12,8 @@ const Sessions = () => {
   const [sessionNotes, setSessionNotes] = useState('');
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [selectedSessionForNotes, setSelectedSessionForNotes] = useState(null);
+  const [addingNotesForSession, setAddingNotesForSession] = useState(null);
+  const [newNotes, setNewNotes] = useState('');
 
   // Format date helper function
   const formatDate = (timestamp) => {
@@ -175,32 +177,88 @@ const Sessions = () => {
     setShowNotesModal(true);
   };
 
+  // Add this helper function for blockchain interaction
+  const saveNoteToBlockchain = async (noteData) => {
+    try {
+      const db = getDatabase();
+      const blockchainRef = ref(db, 'notesBlockchain');
+      
+      // Get the previous block to link to
+      const prevBlockSnapshot = await get(blockchainRef);
+      const prevBlock = prevBlockSnapshot.val();
+      const prevHash = prevBlock ? prevBlock.latestHash : '0';
+      
+      // Create new block data
+      const timestamp = Date.now();
+      const blockData = {
+        previousHash: prevHash,
+        timestamp,
+        data: noteData,
+        therapistId: noteData.therapistId,
+        sessionId: noteData.sessionId
+      };
+      
+      // Create hash of current block
+      const blockHash = await crypto.subtle.digest(
+        'SHA-256',
+        new TextEncoder().encode(JSON.stringify(blockData))
+      );
+      const hashArray = Array.from(new Uint8Array(blockHash));
+      const currentHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      
+      // Save the block
+      await update(ref(db, `notesBlockchain/${timestamp}`), {
+        ...blockData,
+        hash: currentHash
+      });
+      
+      // Update latest hash reference
+      await update(ref(db, 'notesBlockchain'), {
+        latestHash: currentHash
+      });
+      
+      return currentHash;
+    } catch (error) {
+      console.error('Error saving to blockchain:', error);
+      throw error;
+    }
+  };
+
   const handleSaveNotes = async () => {
     if (!selectedSessionForNotes) return;
 
     try {
-      const db = getDatabase();
-      const updates = {
+      const noteData = {
         notes: sessionNotes,
         updatedAt: Date.now(),
         therapistId: user.uid,
         therapistName: therapistData?.name || 'Unknown Therapist',
         sessionDate: selectedSessionForNotes.scheduledDate,
-        sessionTime: selectedSessionForNotes.scheduledTime
+        sessionTime: selectedSessionForNotes.scheduledTime,
+        sessionId: selectedSessionForNotes.id,
+        userId: selectedSessionForNotes.userId
       };
 
-      // Save notes to user's therapy notes
+      // Save to blockchain
+      const blockHash = await saveNoteToBlockchain(noteData);
+
+      const db = getDatabase();
+      // Store reference to blockchain entry
       await update(
         ref(db, `users/${selectedSessionForNotes.userId}/therapyNotes/${selectedSessionForNotes.id}`),
-        updates
+        {
+          ...noteData,
+          blockHash // Store reference to blockchain entry
+        }
       );
 
-      // Update booking status to completed
+      // Update booking status
       await update(
         ref(db, `therapists/${therapistDocId}/bookings/${selectedSessionForNotes.id}`),
         {
           status: 'completed',
-          hasNotes: true
+          hasNotes: true,
+          blockHash // Store reference to blockchain entry
         }
       );
 
@@ -208,7 +266,7 @@ const Sessions = () => {
       setBookings(prevBookings =>
         prevBookings.map(booking =>
           booking.id === selectedSessionForNotes.id
-            ? { ...booking, status: 'completed', hasNotes: true }
+            ? { ...booking, status: 'completed', hasNotes: true, blockHash }
             : booking
         )
       );
@@ -216,10 +274,118 @@ const Sessions = () => {
       setShowNotesModal(false);
       setSessionNotes('');
       setSelectedSessionForNotes(null);
-      alert('Session completed successfully!');
+      alert('Session completed and notes securely saved!');
     } catch (error) {
       console.error('Error completing session:', error);
       alert('Failed to complete session. Please try again.');
+    }
+  };
+
+  const handleAddNotes = async () => {
+    if (!addingNotesForSession) return;
+
+    try {
+      const noteData = {
+        notes: newNotes,
+        createdAt: Date.now(),
+        therapistId: user.uid,
+        therapistName: therapistData?.name || 'Unknown Therapist',
+        sessionDate: addingNotesForSession.scheduledDate,
+        sessionTime: addingNotesForSession.scheduledTime,
+        sessionId: addingNotesForSession.id,
+        userId: addingNotesForSession.userId
+      };
+
+      // Save to blockchain
+      const blockHash = await saveNoteToBlockchain(noteData);
+
+      const db = getDatabase();
+      // Store reference to blockchain entry in a new notes collection
+      await update(
+        ref(db, `users/${addingNotesForSession.userId}/therapyNotes/${addingNotesForSession.id}/${Date.now()}`),
+        {
+          ...noteData,
+          blockHash
+        }
+      );
+
+      setShowNotesModal(false);
+      setNewNotes('');
+      setAddingNotesForSession(null);
+      alert('Additional notes saved successfully!');
+    } catch (error) {
+      console.error('Error adding notes:', error);
+      alert('Failed to add notes. Please try again.');
+    }
+  };
+
+  // Add these new functions
+  const verifyBlockchain = async (sessionId) => {
+    try {
+      const db = getDatabase();
+      const blockchainRef = ref(db, 'notesBlockchain');
+      const snapshot = await get(blockchainRef);
+      
+      if (!snapshot.exists()) {
+        throw new Error('No blockchain data found');
+      }
+
+      const blocks = [];
+      snapshot.forEach((child) => {
+        if (child.key !== 'latestHash') {
+          blocks.push({
+            ...child.val(),
+            timestamp: child.key
+          });
+        }
+      });
+
+      // Sort blocks by timestamp
+      blocks.sort((a, b) => a.timestamp - b.timestamp);
+
+      // Verify the chain
+      for (let i = 1; i < blocks.length; i++) {
+        const currentBlock = blocks[i];
+        const previousBlock = blocks[i-1];
+
+        // Verify previous hash link
+        if (currentBlock.previousHash !== previousBlock.hash) {
+          throw new Error(`Chain broken between blocks ${previousBlock.timestamp} and ${currentBlock.timestamp}`);
+        }
+
+        // Verify current block's hash
+        const blockData = {
+          previousHash: currentBlock.previousHash,
+          timestamp: currentBlock.timestamp,
+          data: currentBlock.data,
+          therapistId: currentBlock.therapistId,
+          sessionId: currentBlock.sessionId
+        };
+
+        const calculatedHash = await crypto.subtle.digest(
+          'SHA-256',
+          new TextEncoder().encode(JSON.stringify(blockData))
+        );
+        const hashArray = Array.from(new Uint8Array(calculatedHash));
+        const calculatedHashString = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+        if (calculatedHashString !== currentBlock.hash) {
+          throw new Error(`Block ${currentBlock.timestamp} has been tampered with`);
+        }
+      }
+
+      // If looking for specific session, find its block
+      if (sessionId) {
+        const sessionBlock = blocks.find(block => block.data.sessionId === sessionId);
+        if (!sessionBlock) {
+          throw new Error('Session notes not found in blockchain');
+        }
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Blockchain verification failed:', error);
+      throw error;
     }
   };
 
@@ -327,14 +493,50 @@ const Sessions = () => {
 
                   {booking.status === 'completed' && (
                     <button
-                      onClick={() => handleCompleteSession(booking)}
+                      onClick={() => {
+                        setAddingNotesForSession(booking);
+                        setNewNotes('');
+                        setShowNotesModal(true);
+                      }}
                       className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors w-full"
                     >
-                      Edit Notes
+                      Add Notes
                     </button>
                   )}
                 </div>
               </div>
+
+              {/* Add verification buttons for completed sessions with notes */}
+              {booking.status === 'completed' && booking.hasNotes && (
+                <div className="mt-4 flex gap-2">
+                  <button
+                    onClick={async () => {
+                      try {
+                        await verifyBlockchain(booking.id);
+                        alert('Notes integrity verified successfully!');
+                      } catch (error) {
+                        alert(`Verification failed: ${error.message}`);
+                      }
+                    }}
+                    className="bg-indigo-500 text-white px-4 py-2 rounded-md hover:bg-indigo-600 transition-colors text-sm"
+                  >
+                    Verify Notes Integrity
+                  </button>
+                  <button
+                    onClick={async () => {
+                      try {
+                        await verifyBlockchain();
+                        alert('Full blockchain integrity verified successfully!');
+                      } catch (error) {
+                        alert(`Verification failed: ${error.message}`);
+                      }
+                    }}
+                    className="bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600 transition-colors text-sm"
+                  >
+                    Verify All Notes
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -352,27 +554,29 @@ const Sessions = () => {
       {showNotesModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
-            <h3 className="text-xl font-semibold mb-4">
-              {selectedSessionForNotes?.status === 'completed' ? 'Edit Session Notes' : 'Complete Session'}
-            </h3>
+            <h3 className="text-xl font-semibold mb-4">Add Additional Notes</h3>
             <textarea
-              value={sessionNotes}
-              onChange={(e) => setSessionNotes(e.target.value)}
+              value={newNotes}
+              onChange={(e) => setNewNotes(e.target.value)}
               className="w-full h-64 p-2 border rounded mb-4"
-              placeholder="Enter session notes here..."
+              placeholder="Enter additional session notes here..."
             />
             <div className="flex justify-end gap-2">
               <button
-                onClick={() => setShowNotesModal(false)}
+                onClick={() => {
+                  setShowNotesModal(false);
+                  setNewNotes('');
+                  setAddingNotesForSession(null);
+                }}
                 className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
               >
                 Cancel
               </button>
               <button
-                onClick={handleSaveNotes}
+                onClick={handleAddNotes}
                 className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
               >
-                {selectedSessionForNotes?.status === 'completed' ? 'Save Notes' : 'Complete Session'}
+                Save Additional Notes
               </button>
             </div>
           </div>
