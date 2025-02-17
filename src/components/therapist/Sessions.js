@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getDatabase, ref, onValue, update, get } from 'firebase/database';
 import { useAuth } from '../../hooks/useAuth';
 import ConfirmBookingModal from './ConfirmBookingModal';
+import { encryptData } from '../../utils/encryption';
 
 const Sessions = () => {
   const { user, therapistData } = useAuth();
@@ -281,13 +282,19 @@ const Sessions = () => {
     }
   };
 
+  // Update the handleAddNotes function
   const handleAddNotes = async () => {
-    if (!addingNotesForSession) return;
+    if (!addingNotesForSession || !newNotes.trim()) return;
 
     try {
+      // Encrypt the notes
+      const { encryptedData: encryptedNotes, key } = await encryptData(newNotes.trim());
+
       const noteData = {
-        notes: newNotes,
+        notes: encryptedNotes,
+        encryptionKey: key,
         createdAt: Date.now(),
+        updatedAt: Date.now(),
         therapistId: user.uid,
         therapistName: therapistData?.name || 'Unknown Therapist',
         sessionDate: addingNotesForSession.scheduledDate,
