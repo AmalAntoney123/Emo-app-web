@@ -117,12 +117,7 @@ function ClientDetail() {
 
   return (
     <div className="space-y-6 p-6 max-w-3xl mx-auto">
-      <button 
-        onClick={() => navigate('/therapist/clients')}
-        className="flex items-center text-primary hover:text-primary-dark mb-4"
-      >
-        <FaArrowLeft className="mr-2" /> Back to Clients
-      </button>
+      
 
       <div className="bg-surface rounded-lg shadow-md p-6 mb-6">
         <div className="flex items-center space-x-4 mb-6">

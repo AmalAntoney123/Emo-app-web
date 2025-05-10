@@ -49,72 +49,76 @@ function Profile() {
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row items-start space-y-6 md:space-y-0 md:space-x-8">
-          <div className="flex flex-col items-center space-y-4">
-            {therapistData.photoURL ? (
-              <img
-                src={therapistData.photoURL}
-                alt="Profile"
-                className="w-32 h-32 rounded-full"
-              />
-            ) : (
-              <FaUserCircle className="w-32 h-32 text-gray-400" />
-            )}
-          </div>
+        <div className="flex flex-col items-center space-y-4 mb-8">
+          {therapistData.photoURL ? (
+            <img
+              src={therapistData.photoURL}
+              alt="Profile"
+              className="w-32 h-32 rounded-full"
+            />
+          ) : (
+            <FaUserCircle className="w-32 h-32 text-gray-400" />
+          )}
+        </div>
 
-          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="text-sm text-disabled">Name</label>
-              <p className="font-medium">{therapistData.name}</p>
-            </div>
-            <div>
-              <label className="text-sm text-disabled">Email</label>
-              <p className="font-medium">{therapistData.email}</p>
-            </div>
-            <div>
-              <label className="text-sm text-disabled">Phone</label>
-              <p className="font-medium">{therapistData.phone}</p>
-            </div>
-            <div>
-              <label className="text-sm text-disabled">Education</label>
-              <p className="font-medium">{therapistData.education}</p>
-            </div>
-            <div>
-              <label className="text-sm text-disabled">Specialization</label>
-              <p className="font-medium">{therapistData.specialization}</p>
-            </div>
-            <div>
-              <label className="text-sm text-disabled">License Number</label>
-              <p className="font-medium">{therapistData.licenseNumber}</p>
-            </div>
-            <div>
-              <label className="text-sm text-disabled">Experience</label>
-              <p className="font-medium">{therapistData.experience} years</p>
-            </div>
-            <div>
-              <label className="text-sm text-disabled">Languages</label>
-              <p className="font-medium">{therapistData.languages}</p>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="text-sm text-disabled">Name</label>
+            <p className="font-medium">{therapistData.name || 'Not specified'}</p>
+          </div>
+          <div>
+            <label className="text-sm text-disabled">Email</label>
+            <p className="font-medium">{therapistData.email || 'Not specified'}</p>
+          </div>
+          <div>
+            <label className="text-sm text-disabled">Phone</label>
+            <p className="font-medium">{therapistData.phone || 'Not specified'}</p>
+          </div>
+          <div>
+            <label className="text-sm text-disabled">Education</label>
+            <p className="font-medium">{therapistData.education || 'Not specified'}</p>
+          </div>
+          <div>
+            <label className="text-sm text-disabled">Specialization</label>
+            <p className="font-medium">{therapistData.specialization || 'Not specified'}</p>
+          </div>
+          <div>
+            <label className="text-sm text-disabled">License Number</label>
+            <p className="font-medium">{therapistData.licenseNumber || 'Not specified'}</p>
+          </div>
+          <div>
+            <label className="text-sm text-disabled">Experience</label>
+            <p className="font-medium">{therapistData.experience ? `${therapistData.experience} years` : 'Not specified'}</p>
+          </div>
+          <div>
+            <label className="text-sm text-disabled">Languages</label>
+            <p className="font-medium">{therapistData.languages || 'Not specified'}</p>
           </div>
         </div>
 
-        <div className="mt-8">
-          <label className="text-sm text-disabled">Bio</label>
-          <p className="mt-2">{therapistData.bio}</p>
+        {therapistData.bio && (
+          <div className="mt-8">
+            <label className="text-sm text-disabled">Bio</label>
+            <p className="mt-2">{therapistData.bio}</p>
+          </div>
+        )}
+      </div>
+
+      {therapistData.availability && (
+        <div className="bg-surface rounded-lg shadow-md p-8">
+          <h3 className="text-xl font-semibold mb-4">Availability</h3>
+          <p className="text-text">{therapistData.availability}</p>
         </div>
-      </div>
+      )}
 
-      <div className="bg-surface rounded-lg shadow-md p-8">
-        <h3 className="text-xl font-semibold mb-4">Availability</h3>
-        <p className="text-text">{therapistData.availability}</p>
-      </div>
-
-      <div className="bg-surface rounded-lg shadow-md p-8">
-        <h3 className="text-xl font-semibold mb-4">Rates</h3>
-        <p className="text-text">
-          Hourly Rate: ₹{therapistData.hourlyRate}/hour
-        </p>
-      </div>
+      {therapistData.hourlyRate && (
+        <div className="bg-surface rounded-lg shadow-md p-8">
+          <h3 className="text-xl font-semibold mb-4">Rates</h3>
+          <p className="text-text">
+            Hourly Rate: ₹{therapistData.hourlyRate}/hour
+          </p>
+        </div>
+      )}
 
       <EditProfileModal
         isOpen={showEditModal}

@@ -41,13 +41,18 @@ export const useAuth = () => {
               
               if (therapistsSnapshot.exists()) {
                 const therapistsData = therapistsSnapshot.val();
-                const therapistInfo = Object.values(therapistsData).find(
-                  t => t.uid === user.uid
+                const therapistEntry = Object.entries(therapistsData).find(
+                  ([_, t]) => t.uid === user.uid
                 );
                 
-                if (therapistInfo) {
-                  setTherapistData(therapistInfo);
-                  localStorage.setItem('therapistData', JSON.stringify(therapistInfo));
+                if (therapistEntry) {
+                  const [id, therapistInfo] = therapistEntry;
+                  const completeTherapistData = {
+                    id,
+                    ...therapistInfo
+                  };
+                  setTherapistData(completeTherapistData);
+                  localStorage.setItem('therapistData', JSON.stringify(completeTherapistData));
                 }
               }
             }

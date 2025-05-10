@@ -22,14 +22,7 @@ function Therapists() {
     name: '',
     email: '',
     phone: '',
-    specialization: '',
-    experience: '',
-    education: '',
-    licenseNumber: '',
-    bio: '',
-    languages: [],
-    availability: '',
-    hourlyRate: '',
+    profileCompleted: false,
   });
 
   // Updated language options
@@ -140,7 +133,7 @@ function Therapists() {
         ...newTherapist,
         uid: userCredential.user.uid,
         createdAt: Date.now(),
-        languages: newTherapist.languages.join(', '),
+        profileCompleted: false,
       });
 
       // Send welcome email using EmailJS
@@ -165,17 +158,9 @@ function Therapists() {
         name: '',
         email: '',
         phone: '',
-        specialization: '',
-        experience: '',
-        education: '',
-        licenseNumber: '',
-        bio: '',
-        languages: [],
-        availability: '',
-        hourlyRate: '',
+        profileCompleted: false,
       });
 
-      
       fetchTherapists();
     } catch (error) {
       console.error('Error adding therapist:', error);
@@ -228,9 +213,9 @@ function Therapists() {
       <h3 className="text-lg font-semibold mb-4">Add New Therapist</h3>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Personal Information */}
+          {/* Essential Information */}
           <div className="col-span-2">
-            <h4 className="text-md font-medium mb-2">Personal Information</h4>
+            <h4 className="text-md font-medium mb-2">Essential Information</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <input
                 type="text"
@@ -257,108 +242,7 @@ function Therapists() {
                 className="p-2 border rounded"
                 required
               />
-              <div className="w-full">
-                <Select
-                  isMulti
-                  name="languages"
-                  options={languageOptions}
-                  className="basic-multi-select"
-                  classNamePrefix="select"
-                  placeholder="Select Languages"
-                  value={languageOptions.filter(option => 
-                    newTherapist.languages.includes(option.value)
-                  )}
-                  onChange={handleLanguageChange}
-                  required
-                />
-              </div>
             </div>
-          </div>
-
-          {/* Professional Information */}
-          <div className="col-span-2">
-            <h4 className="text-md font-medium mb-2">Professional Information</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input
-                type="text"
-                placeholder="Specialization"
-                value={newTherapist.specialization}
-                onChange={(e) => setNewTherapist({...newTherapist, specialization: e.target.value})}
-                className="p-2 border rounded"
-                required
-              />
-              <input
-                type="number"
-                placeholder="Years of Experience"
-                min="0"
-                max="100"
-                value={newTherapist.experience}
-                onChange={(e) => setNewTherapist({...newTherapist, experience: e.target.value})}
-                className="p-2 border rounded"
-                required
-              />
-              <input
-                type="text"
-                placeholder="Education/Qualifications"
-                value={newTherapist.education}
-                onChange={(e) => setNewTherapist({...newTherapist, education: e.target.value})}
-                className="p-2 border rounded"
-                required
-              />
-              <input
-                type="text"
-                placeholder="License Number"
-                value={newTherapist.licenseNumber}
-                onChange={(e) => setNewTherapist({...newTherapist, licenseNumber: e.target.value})}
-                className="p-2 border rounded"
-                required
-              />
-            </div>
-          </div>
-
-          {/* Scheduling & Rates */}
-          <div className="col-span-2">
-            <h4 className="text-md font-medium mb-2">Scheduling & Rates</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <select
-                value={newTherapist.availability}
-                onChange={(e) => setNewTherapist({...newTherapist, availability: e.target.value})}
-                className="p-2 border rounded"
-                required
-              >
-                <option value="">Select Availability</option>
-                <option value="Weekdays 9AM-5PM">Weekdays 9AM-5PM</option>
-                <option value="Weekdays Evening">Weekdays Evening</option>
-                <option value="Weekends Only">Weekends Only</option>
-                <option value="Flexible">Flexible</option>
-              </select>
-              <div className="flex items-center border rounded">
-                <span className="px-3 bg-gray-100 border-r h-full flex items-center">₹</span>
-                <input
-                  type="number"
-                  placeholder="Hourly Rate"
-                  min="0"
-                  step="0.01"
-                  value={newTherapist.hourlyRate}
-                  onChange={(e) => setNewTherapist({...newTherapist, hourlyRate: e.target.value})}
-                  className="p-2 flex-1 focus:outline-none"
-                  required
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Bio */}
-          <div className="col-span-2">
-            <h4 className="text-md font-medium mb-2">Professional Bio</h4>
-            <textarea
-              placeholder="Write a professional bio describing your experience, approach, and specialties..."
-              value={newTherapist.bio}
-              onChange={(e) => setNewTherapist({...newTherapist, bio: e.target.value})}
-              className="p-2 border rounded w-full"
-              rows="4"
-              required
-            />
           </div>
         </div>
 

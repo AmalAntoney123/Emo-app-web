@@ -9,6 +9,7 @@ import Sessions from './Sessions';
 import Schedule from './Schedule';
 import Notes from './Notes';
 import Profile from './Profile';
+import CompleteProfileModal from './CompleteProfileModal';
 
 function TherapistDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -16,6 +17,7 @@ function TherapistDashboard() {
   const { user, therapistData } = useAuth();
   const [loading, setLoading] = useState(true);
   const [bookings, setBookings] = useState([]);
+  const [showCompleteProfile, setShowCompleteProfile] = useState(false);
   const [stats, setStats] = useState({
     totalClients: 0,
     upcomingSessions: 0,
@@ -27,6 +29,19 @@ function TherapistDashboard() {
     fetchDashboardData();
     fetchBookings();
   }, [user]);
+
+  useEffect(() => {
+    if (therapistData && !therapistData.profileCompleted) {
+      setShowCompleteProfile(true);
+    }
+  }, [therapistData]);
+
+  const handleProfileUpdate = (updatedData) => {
+    setShowCompleteProfile(false);
+    // Refresh the dashboard data
+    fetchDashboardData();
+    fetchBookings();
+  };
 
   const fetchBookings = async () => {
     if (!therapistData?.id) return;
@@ -74,40 +89,60 @@ function TherapistDashboard() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      // Fetch therapist-specific data
-      const clientsRef = ref(db, `therapists/${therapistData?.id}/clients`);
-      const sessionsRef = ref(db, `therapists/${therapistData?.id}/sessions`);
       
-      const [clientsSnapshot, sessionsSnapshot] = await Promise.all([
-        get(clientsRef),
-        get(sessionsRef),
-      ]);
-
-      const clients = clientsSnapshot.val() || {};
-      const sessions = sessionsSnapshot.val() || {};
-
-      // Calculate stats
-      const totalClients = Object.keys(clients).length;
-      const allSessions = Object.values(sessions);
-      const upcomingSessions = allSessions.filter(
-        session => new Date(session.date) > new Date()
-      ).length;
-      const completedSessions = allSessions.filter(
-        session => session.status === 'completed'
-      ).length;
-      const ratings = allSessions
-        .filter(session => session.rating)
-        .map(session => session.rating);
-      const averageRating = ratings.length 
-        ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)
-        : 0;
-
-      setStats({
-        totalClients,
-        upcomingSessions,
-        completedSessions,
-        averageRating,
+      // Get therapist document ID
+      const therapistsRef = ref(db, 'therapists');
+      const therapistsSnapshot = await get(therapistsRef);
+      let therapistKey = null;
+      
+      therapistsSnapshot.forEach(child => {
+        if (child.val().uid === user.uid) therapistKey = child.key;
       });
+
+      if (!therapistKey) {
+        setLoading(false);
+        return;
+      }
+
+      // Fetch bookings
+      const bookingsRef = ref(db, `therapists/${therapistKey}/bookings`);
+      const bookingsSnapshot = await get(bookingsRef);
+      
+      if (bookingsSnapshot.exists()) {
+        const bookings = Object.values(bookingsSnapshot.val());
+        
+        // Get unique client IDs
+        const uniqueClients = new Set(bookings.map(booking => booking.userId));
+        
+        // Calculate stats
+        const totalClients = uniqueClients.size;
+        const now = new Date();
+        
+        const upcomingSessions = bookings.filter(booking => {
+          const bookingDate = new Date(booking.scheduledDate);
+          return bookingDate > now && booking.status === 'scheduled';
+        }).length;
+
+        const completedSessions = bookings.filter(booking => 
+          booking.status === 'completed'
+        ).length;
+
+        // Calculate average rating from completed sessions
+        const ratings = bookings
+          .filter(booking => booking.status === 'completed' && booking.rating)
+          .map(booking => booking.rating);
+        
+        const averageRating = ratings.length 
+          ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)
+          : 0;
+
+        setStats({
+          totalClients,
+          upcomingSessions,
+          completedSessions,
+          averageRating,
+        });
+      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -164,6 +199,13 @@ function TherapistDashboard() {
           </div>
         </main>
       </div>
+
+      <CompleteProfileModal
+        isOpen={showCompleteProfile}
+        onClose={() => setShowCompleteProfile(false)}
+        therapistData={therapistData}
+        onUpdate={handleProfileUpdate}
+      />
     </div>
   );
 }
