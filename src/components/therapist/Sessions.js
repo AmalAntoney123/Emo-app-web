@@ -15,6 +15,8 @@ const Sessions = () => {
   const [selectedSessionForNotes, setSelectedSessionForNotes] = useState(null);
   const [addingNotesForSession, setAddingNotesForSession] = useState(null);
   const [newNotes, setNewNotes] = useState('');
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentDescription, setPaymentDescription] = useState('');
 
   // Format date helper function
   const formatDate = (timestamp) => {
@@ -166,14 +168,17 @@ const Sessions = () => {
 
   const handleCompleteSession = async (booking) => {
     setSelectedSessionForNotes(booking);
+    // Reset payment fields
+    setPaymentAmount('');
+    setPaymentDescription('');
     // Fetch existing notes if any
     const db = getDatabase();
     const notesRef = ref(db, `users/${booking.userId}/therapyNotes/${booking.id}`);
     const snapshot = await get(notesRef);
     if (snapshot.exists()) {
-      setSessionNotes(snapshot.val().notes);
+      setNewNotes(snapshot.val().notes);
     } else {
-      setSessionNotes('');
+      setNewNotes('');
     }
     setShowNotesModal(true);
   };
@@ -187,31 +192,35 @@ const Sessions = () => {
       // Get the previous block to link to
       const prevBlockSnapshot = await get(blockchainRef);
       const prevBlock = prevBlockSnapshot.val();
-      const prevHash = prevBlock ? prevBlock.latestHash : '0';
+      const prevHash = prevBlock?.latestHash || '0';
       
-      // Create new block data
+      // Create new block data - ensure consistent object structure
       const timestamp = Date.now();
       const blockData = {
         previousHash: prevHash,
         timestamp,
         data: noteData,
-        therapistId: noteData.therapistId,
+        therapistId: user.uid,
         sessionId: noteData.sessionId
       };
       
-      // Create hash of current block
+      // Create hash of current block - ensure consistent stringification
+      const blockString = JSON.stringify(blockData, Object.keys(blockData).sort());
       const blockHash = await crypto.subtle.digest(
         'SHA-256',
-        new TextEncoder().encode(JSON.stringify(blockData))
+        new TextEncoder().encode(blockString)
       );
       const hashArray = Array.from(new Uint8Array(blockHash));
       const currentHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
       
-      // Save the block
-      await update(ref(db, `notesBlockchain/${timestamp}`), {
+      // Save the block with the exact same structure as we verify
+      const blockToSave = {
         ...blockData,
         hash: currentHash
-      });
+      };
+      
+      // Save the block
+      await update(ref(db, `notesBlockchain/${timestamp}`), blockToSave);
       
       // Update latest hash reference
       await update(ref(db, 'notesBlockchain'), {
@@ -228,16 +237,24 @@ const Sessions = () => {
   const handleSaveNotes = async () => {
     if (!selectedSessionForNotes) return;
 
+    if (!paymentAmount || isNaN(paymentAmount) || parseFloat(paymentAmount) <= 0) {
+      alert('Please enter a valid payment amount');
+      return;
+    }
+
     try {
       const noteData = {
-        notes: sessionNotes,
+        notes: newNotes,
         updatedAt: Date.now(),
         therapistId: user.uid,
         therapistName: therapistData?.name || 'Unknown Therapist',
         sessionDate: selectedSessionForNotes.scheduledDate,
         sessionTime: selectedSessionForNotes.scheduledTime,
         sessionId: selectedSessionForNotes.id,
-        userId: selectedSessionForNotes.userId
+        userId: selectedSessionForNotes.userId,
+        paymentAmount: parseFloat(paymentAmount),
+        paymentDescription: paymentDescription,
+        paymentStatus: 'pending'
       };
 
       // Save to blockchain
@@ -253,13 +270,16 @@ const Sessions = () => {
         }
       );
 
-      // Update booking status
+      // Update booking status and payment info
       await update(
         ref(db, `therapists/${therapistDocId}/bookings/${selectedSessionForNotes.id}`),
         {
           status: 'completed',
           hasNotes: true,
-          blockHash // Store reference to blockchain entry
+          blockHash, // Store reference to blockchain entry
+          paymentAmount: parseFloat(paymentAmount),
+          paymentDescription: paymentDescription,
+          paymentStatus: 'pending'
         }
       );
 
@@ -267,13 +287,15 @@ const Sessions = () => {
       setBookings(prevBookings =>
         prevBookings.map(booking =>
           booking.id === selectedSessionForNotes.id
-            ? { ...booking, status: 'completed', hasNotes: true, blockHash }
+            ? { ...booking, status: 'completed', hasNotes: true, blockHash, paymentAmount: parseFloat(paymentAmount), paymentDescription, paymentStatus: 'pending' }
             : booking
         )
       );
 
       setShowNotesModal(false);
-      setSessionNotes('');
+      setNewNotes('');
+      setPaymentAmount('');
+      setPaymentDescription('');
       setSelectedSessionForNotes(null);
       alert('Session completed and notes securely saved!');
     } catch (error) {
@@ -342,7 +364,7 @@ const Sessions = () => {
         if (child.key !== 'latestHash') {
           blocks.push({
             ...child.val(),
-            timestamp: child.key
+            timestamp: parseInt(child.key)
           });
         }
       });
@@ -360,7 +382,7 @@ const Sessions = () => {
           throw new Error(`Chain broken between blocks ${previousBlock.timestamp} and ${currentBlock.timestamp}`);
         }
 
-        // Verify current block's hash
+        // Verify current block's hash - ensure consistent object structure
         const blockData = {
           previousHash: currentBlock.previousHash,
           timestamp: currentBlock.timestamp,
@@ -369,9 +391,11 @@ const Sessions = () => {
           sessionId: currentBlock.sessionId
         };
 
+        // Use the same stringification method as when creating the block
+        const blockString = JSON.stringify(blockData, Object.keys(blockData).sort());
         const calculatedHash = await crypto.subtle.digest(
           'SHA-256',
-          new TextEncoder().encode(JSON.stringify(blockData))
+          new TextEncoder().encode(blockString)
         );
         const hashArray = Array.from(new Uint8Array(calculatedHash));
         const calculatedHashString = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
@@ -561,29 +585,64 @@ const Sessions = () => {
       {showNotesModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
-            <h3 className="text-xl font-semibold mb-4">Add Additional Notes</h3>
-            <textarea
-              value={newNotes}
-              onChange={(e) => setNewNotes(e.target.value)}
-              className="w-full h-64 p-2 border rounded mb-4"
-              placeholder="Enter additional session notes here..."
-            />
-            <div className="flex justify-end gap-2">
+            <h3 className="text-xl font-semibold mb-4">
+              {addingNotesForSession ? 'Add Additional Notes' : 'Complete Session'}
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Session Notes</label>
+                <textarea
+                  value={newNotes}
+                  onChange={(e) => setNewNotes(e.target.value)}
+                  className="w-full h-32 p-2 border rounded"
+                  placeholder="Enter session notes here..."
+                />
+              </div>
+              {!addingNotesForSession && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Payment Amount (₹)</label>
+                    <input
+                      type="number"
+                      value={paymentAmount}
+                      onChange={(e) => setPaymentAmount(e.target.value)}
+                      className="w-full p-2 border rounded"
+                      placeholder="Enter payment amount in rupees"
+                      min="0"
+                      step="1"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Payment Description</label>
+                    <textarea
+                      value={paymentDescription}
+                      onChange={(e) => setPaymentDescription(e.target.value)}
+                      className="w-full h-20 p-2 border rounded"
+                      placeholder="Enter payment description (e.g., Session fee for 1 hour therapy)"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
               <button
                 onClick={() => {
                   setShowNotesModal(false);
                   setNewNotes('');
+                  setPaymentAmount('');
+                  setPaymentDescription('');
                   setAddingNotesForSession(null);
+                  setSelectedSessionForNotes(null);
                 }}
                 className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
               >
                 Cancel
               </button>
               <button
-                onClick={handleAddNotes}
+                onClick={addingNotesForSession ? handleAddNotes : handleSaveNotes}
                 className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
               >
-                Save Additional Notes
+                {addingNotesForSession ? 'Save Additional Notes' : 'Complete Session'}
               </button>
             </div>
           </div>
