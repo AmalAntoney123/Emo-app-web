@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '../../firebase';
-import { ref, get, set, remove, push } from 'firebase/database';
+import { ref, get, set, remove, push, update } from 'firebase/database';
 import { Tabs } from 'flowbite-react';
 import { FaUsers, FaPlus } from 'react-icons/fa';
 
@@ -79,9 +79,18 @@ function SupportGroups() {
 
   const deleteGroup = async (groupId) => {
     if (window.confirm('Are you sure you want to delete this group?')) {
-      const groupRef = ref(db, `supportGroups/${groupId}`);
-      await remove(groupRef);
-      fetchGroups();
+      try {
+        const groupRef = ref(db, `supportGroups/${groupId}`);
+        await update(groupRef, {
+          isDeleted: true,
+          deletedAt: Date.now()
+        });
+        await fetchGroups();
+        alert('Group has been successfully deleted.');
+      } catch (error) {
+        console.error('Error deleting group:', error);
+        alert('Failed to delete group. Please try again.');
+      }
     }
   };
 
@@ -108,7 +117,7 @@ function SupportGroups() {
 
   const renderGroupsList = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {groups.map((group) => (
+      {groups.filter(group => !group.isDeleted).map((group) => (
         <div key={group.id} className="border p-4 rounded">
           <h3 className="text-xl font-semibold">{group.name}</h3>
           <p>{group.description}</p>
