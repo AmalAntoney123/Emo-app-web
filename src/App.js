@@ -16,6 +16,8 @@ import AuthGuard from './components/AuthGuard';
 import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 import TherapistDashboard from './components/therapist/TherapistDashboard';
 import ProtectedTherapistRoute from './components/ProtectedTherapistRoute';
+import ClientDetail from './components/therapist/ClientDetail';
+import Clients from './components/therapist/Clients';
 
 
 
@@ -66,6 +68,8 @@ function App() {
               </ProtectedTherapistRoute>
             } 
           />
+          <Route path="/therapist/clients" element={<Clients />} />
+          <Route path="/therapist/clients/:clientId" element={<ClientDetail />} />
         </Routes>
       </div>
     </Router>
